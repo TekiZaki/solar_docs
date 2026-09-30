@@ -1,0 +1,10 @@
+{
+  "appId": "com.solardocs.app",
+  "appName": "solar_docs",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}
