@@ -1,0 +1,947 @@
+[
+  {
+    "id": "slot_001",
+    "section": "I.III. LOKASI PEKERJAAN",
+    "phaseKey": "general",
+    "mediaTarget": "media/image3.jpeg",
+    "rId": "rId11",
+    "defaultCaption": "Foto Bangunan Gedung (Lokasi Pekerjaan)",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_002",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image10.png",
+    "rId": "rId18",
+    "defaultCaption": "Kondisi Keseluruhan Komponen Utama PLTS (Inverter, Panel DC/AC)",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_003",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image11.png",
+    "rId": "rId19",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_004",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image12.png",
+    "rId": "rId20",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_005",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image13.jpeg",
+    "rId": "rId21",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_006",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image14.jpeg",
+    "rId": "rId22",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_007",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image15.jpeg",
+    "rId": "rId23",
+    "defaultCaption": "Kondisi Inverter Kehua 15 kWp saat tiba di lokasi",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_008",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image16.png",
+    "rId": "rId24",
+    "defaultCaption": "Kondisi APAR saat tiba di lokasi",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_009",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image109.jpeg",
+    "rId": "rId109",
+    "defaultCaption": "Kondisi monitoring",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_010",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image110.jpeg",
+    "rId": "rId110",
+    "defaultCaption": "Kondisi Smart TV",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_011",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image17.jpeg",
+    "rId": "rId25",
+    "defaultCaption": "Pengecekan kondisi terpasang panel surya di Rooftop",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_012",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image18.jpeg",
+    "rId": "rId26",
+    "defaultCaption": "Pengecekan kondisi terpasang panel surya di Rooftop",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_013",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image19.jpeg",
+    "rId": "rId27",
+    "defaultCaption": "Pengecekan kondisi terpasang panel surya di Rooftop",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_014",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image20.jpeg",
+    "rId": "rId28",
+    "defaultCaption": "Photo pengencangan Koneksi kabel Panel DC Combiner Box",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_015",
+    "section": "II.I. PENGECEKAN KONDISI INSTALASI",
+    "phaseKey": "physical",
+    "mediaTarget": "media/image21.jpeg",
+    "rId": "rId29",
+    "defaultCaption": "Photo pengencangan Koneksi kabel Panel AC Combiner Box",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_016",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image22.jpeg",
+    "rId": "rId30",
+    "defaultCaption": "Pengukuran Tegangan Vmpp String 1, Vmpp = 495 Vdc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_017",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image23.jpeg",
+    "rId": "rId31",
+    "defaultCaption": "Pengukuran Tegangan Vmpp String 2, Vmpp = 498 Vdc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_018",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image24.jpeg",
+    "rId": "rId32",
+    "defaultCaption": "Pengukuran Tegangan Vmpp String 3, Vmpp = 508 Vdc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_019",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image25.jpeg",
+    "rId": "rId33",
+    "defaultCaption": "Pengukuran Arus Impp String 1, Impp = 6,19 Idc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_020",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image26.jpeg",
+    "rId": "rId34",
+    "defaultCaption": "Pengukuran Arus Impp String 2, Impp = 6,17 Idc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_021",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image27.jpeg",
+    "rId": "rId35",
+    "defaultCaption": "Pengukuran Arus Impp String 3, Impp = 5,99 Idc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_022",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image28.jpeg",
+    "rId": "rId36",
+    "defaultCaption": "Pengukuran Tegangan Netral-Fasa R= 216,5 Vac",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_023",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image29.jpeg",
+    "rId": "rId37",
+    "defaultCaption": "Pengukuran Tegangan Netral-Fasa S= 228,9 Vac",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_024",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image30.jpeg",
+    "rId": "rId38",
+    "defaultCaption": "Pengukuran Tegangan Netral-Fasa T= 224,2 Vac",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_025",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image31.jpeg",
+    "rId": "rId39",
+    "defaultCaption": "Pengukuran Tegangan Netral-Ground = 4,83 Vac",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_026",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image32.jpeg",
+    "rId": "rId40",
+    "defaultCaption": "Pengukuran Tegangan Fasa R-Fasa S= 384,5 Vac",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_027",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image33.jpeg",
+    "rId": "rId41",
+    "defaultCaption": "Pengukuran Tegangan Fasa R-Fasa T= 384,1 Vac",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_028",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image34.jpeg",
+    "rId": "rId42",
+    "defaultCaption": "Pengukuran Tegangan Fasa S-Fasa T= 389,1 Vac",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_028b",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image112.jpeg",
+    "rId": "rId112",
+    "defaultCaption": "Pengukuran Frequensi = 49,99 Hz",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_029",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image35.jpeg",
+    "rId": "rId43",
+    "defaultCaption": "Pengukuran Arus Fasa R = 11,39 A",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_030",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image36.jpeg",
+    "rId": "rId44",
+    "defaultCaption": "Pengukuran Arus Fasa S = 11,44 A",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_031",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image37.jpeg",
+    "rId": "rId45",
+    "defaultCaption": "Pengukuran Arus Fasa T = 11,51 A",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_032",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image38.jpeg",
+    "rId": "rId46",
+    "defaultCaption": "Power Meter pada AC Combiner Box dalam kondisi normal",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_033",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image39.jpeg",
+    "rId": "rId47",
+    "defaultCaption": "IV Curve String 1",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_034",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image40.jpeg",
+    "rId": "rId48",
+    "defaultCaption": "PV Analisis String 1, Voc=730V, Irr = 522 w/m2",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_034b",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/pra_ivcurve_string2.jpg",
+    "rId": "rId114",
+    "isCustom": true,
+    "defaultCaption": "IV Curve String 2",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_034c",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/pra_pvanalisis_string2.jpg",
+    "rId": "rId115",
+    "isCustom": true,
+    "defaultCaption": "PV Analisis String 2, Voc=727V, Irr = 253 w/m2",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_034d",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/pra_ivcurve_string3.jpg",
+    "rId": "rId116",
+    "isCustom": true,
+    "defaultCaption": "IV Curve String 3",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_034e",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/pra_pvanalisis_string3.jpg",
+    "rId": "rId117",
+    "isCustom": true,
+    "defaultCaption": "PV Analisis String 3, Voc=734V, Irr = 472 w/m2",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_035",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image41.jpeg",
+    "rId": "rId49",
+    "defaultCaption": "Photo Thermal Imager 1 = Panel DC Combiner Box",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_036",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image42.jpeg",
+    "rId": "rId50",
+    "defaultCaption": "Photo Thermal Imager 2 = Inverter",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_037",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image43.jpeg",
+    "rId": "rId51",
+    "defaultCaption": "Photo Thermal Imager 3 = Panel AC Combiner Box",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_038",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image44.jpeg",
+    "rId": "rId52",
+    "defaultCaption": "Photo IR Thermometer 1 = Panel DC Combiner Box",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_039",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image45.jpeg",
+    "rId": "rId53",
+    "defaultCaption": "Photo IR Thermometer 2 = Inverter",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_040",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image46.jpeg",
+    "rId": "rId54",
+    "defaultCaption": "Photo IR Thermometer 3 = Panel AC Combiner Box",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_041",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image47.jpeg",
+    "rId": "rId55",
+    "defaultCaption": "Photo Pengukuran Grounding dengan Ground Tester 1",
+    "defaultDate": "Selasa, 24 Agustus 2026"
+  },
+  {
+    "id": "slot_042",
+    "section": "II.II. PENGUKURAN PRA PEMBERSIHAN",
+    "phaseKey": "pre_measure",
+    "mediaTarget": "media/image48.jpeg",
+    "rId": "rId56",
+    "defaultCaption": "Photo Pengukuran Grounding dengan Ground Tester 2",
+    "defaultDate": "Selasa, 24 Agustus 2026"
+  },
+  {
+    "id": "slot_043",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image49.jpeg",
+    "rId": "rId57",
+    "defaultCaption": "Photo Panel sebelum dibersihkan",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_044",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image50.jpeg",
+    "rId": "rId58",
+    "defaultCaption": "Photo Panel sebelum dibersihkan",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_045",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image51.jpeg",
+    "rId": "rId59",
+    "defaultCaption": "Pengecekan Thermal Imager pada Panel Surya",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_046",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image52.jpeg",
+    "rId": "rId60",
+    "defaultCaption": "Pengecekan Thermal Imager pada Panel Surya",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_047",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image53.jpeg",
+    "rId": "rId61",
+    "defaultCaption": "Pengecekan IR Thermometer pada Panel Surya",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_048",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image54.jpeg",
+    "rId": "rId62",
+    "defaultCaption": "Pengecekan IR Thermometer pada Panel Surya",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_049",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image55.jpeg",
+    "rId": "rId63",
+    "defaultCaption": "Photo Proses pembersihan Panel Surya",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_050",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image56.jpeg",
+    "rId": "rId64",
+    "defaultCaption": "Photo Proses pembersihan Panel Surya",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_051",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image57.jpeg",
+    "rId": "rId65",
+    "defaultCaption": "Pengecekan Thermal Imager pada Panel Surya setelah dibersihkan",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_052",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image58.jpeg",
+    "rId": "rId66",
+    "defaultCaption": "Pengecekan Thermal Imager pada Panel Surya setelah dibersihkan",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_053",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image53.jpeg",
+    "rId": "rId61",
+    "defaultCaption": "Pengecekan IR Thermometer pada Panel Surya setelah dibersihkan",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_054",
+    "section": "II.III. PEMBERSIHAN",
+    "phaseKey": "cleaning",
+    "mediaTarget": "media/image54.jpeg",
+    "rId": "rId62",
+    "defaultCaption": "Pengecekan IR Thermometer pada Panel Surya setelah dibersihkan",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_055",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image59.jpeg",
+    "rId": "rId67",
+    "defaultCaption": "Kondisi Keseluruhan Komponen Utama PLTS (Inverter, Panel DC/AC, RMS dan Smart TV)",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_056",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image60.png",
+    "rId": "rId68",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_057",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image61.jpeg",
+    "rId": "rId69",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_058",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image62.jpeg",
+    "rId": "rId70",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_059",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image63.jpeg",
+    "rId": "rId71",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_060",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image64.jpeg",
+    "rId": "rId72",
+    "defaultCaption": "Kondisi Inverter Keyhua Tech 15 kWp saat tiba di lokasi",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_061",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image65.png",
+    "rId": "rId73",
+    "defaultCaption": "Kondisi APAR saat tiba di lokasi",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_062",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image66.png",
+    "rId": "rId74",
+    "defaultCaption": "Kondisi monitoring",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_063",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image111.jpeg",
+    "rId": "rId111",
+    "defaultCaption": "Kondisi Smart TV",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_064",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image67.png",
+    "rId": "rId75",
+    "defaultCaption": "Pengecekan kondisi panel surya di Rooftop Pasca pembersihan PV",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_065",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image68.jpeg",
+    "rId": "rId76",
+    "defaultCaption": "Pengecekan kondisi panel surya di Rooftop Pasca pembersihan PV",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_066",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image69.png",
+    "rId": "rId77",
+    "defaultCaption": "Pengecekan kondisi panel surya di Rooftop Pasca pembersihan PV",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_067",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image70.jpeg",
+    "rId": "rId78",
+    "defaultCaption": "Pengukuran Arus Impp String 1, Impp = 5,17 Idc",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_068",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image71.jpeg",
+    "rId": "rId79",
+    "defaultCaption": "Pengukuran Arus Impp String 2, Impp = 5,05 Idc",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_069",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image72.jpeg",
+    "rId": "rId80",
+    "defaultCaption": "Pengukuran Arus Impp String 3, Impp = 5,19 Idc",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_070",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image73.png",
+    "rId": "rId81",
+    "defaultCaption": "Pengukuran Tegangan Netral-Fasa R= 216,5 Vac",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_071",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image74.png",
+    "rId": "rId82",
+    "defaultCaption": "Pengukuran Tegangan Netral-Fasa S= 228,9 Vac",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_072",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image75.png",
+    "rId": "rId83",
+    "defaultCaption": "Pengukuran Tegangan Netral-Fasa T= 224,2 Vac",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_073",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image76.png",
+    "rId": "rId84",
+    "defaultCaption": "Pengukuran Tegangan Netral-Ground = 4,83 Vac",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_074",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image77.jpeg",
+    "rId": "rId85",
+    "defaultCaption": "Pengukuran Tegangan Fasa R-Fasa S= 388,4 Vac",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_075",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image78.jpeg",
+    "rId": "rId86",
+    "defaultCaption": "Pengukuran Tegangan Fasa R-Fasa T= 390 Vac",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_076",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image79.jpeg",
+    "rId": "rId87",
+    "defaultCaption": "Pengukuran Tegangan Fasa S-Fasa T= 385,6 Vac",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_076b",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/pasca_frekuensi.jpg",
+    "rId": "rId122",
+    "isCustom": true,
+    "defaultCaption": "Pengukuran Frequensi = 49,99 Hz",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_077",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image80.jpeg",
+    "rId": "rId88",
+    "defaultCaption": "Pengukuran Tegangan Vmpp String 1, Vmpp = 527 Vdc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_078",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image81.jpeg",
+    "rId": "rId89",
+    "defaultCaption": "Pengukuran Tegangan Vmpp String 2, Vmpp = 521 Vdc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_079",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image82.jpeg",
+    "rId": "rId90",
+    "defaultCaption": "Pengukuran Tegangan Vmpp String 3, Vmpp = 533 Vdc",
+    "defaultDate": "Sabtu, 05 September 2026"
+  },
+  {
+    "id": "slot_080",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image83.jpeg",
+    "rId": "rId91",
+    "defaultCaption": "Pengukuran Arus Fasa R = 11,39 A",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_081",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image84.jpeg",
+    "rId": "rId92",
+    "defaultCaption": "Pengukuran Arus Fasa S = 11,44 A",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_082",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image85.jpeg",
+    "rId": "rId93",
+    "defaultCaption": "Pengukuran Arus Fasa T = 11,57 A",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_083",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image86.jpeg",
+    "rId": "rId94",
+    "defaultCaption": "Power Meter pada AC Combiner Box dalam kondisi Normal",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_084",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image87.jpeg",
+    "rId": "rId95",
+    "defaultCaption": "IV Curve String 1",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_085",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image88.jpeg",
+    "rId": "rId96",
+    "defaultCaption": "PV Analisis String 1, Voc=730V, Irr = 522 w/m2",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_085b",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/pasca_ivcurve_string2.jpg",
+    "rId": "rId118",
+    "isCustom": true,
+    "defaultCaption": "IV Curve String 2",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_085c",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/pasca_pvanalisis_string2.jpg",
+    "rId": "rId119",
+    "isCustom": true,
+    "defaultCaption": "PV Analisis String 2, Voc=727V, Irr = 253 w/m2",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_085d",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/pasca_ivcurve_string3.jpg",
+    "rId": "rId120",
+    "isCustom": true,
+    "defaultCaption": "IV Curve String 3",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_085e",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/pasca_pvanalisis_string3.jpg",
+    "rId": "rId121",
+    "isCustom": true,
+    "defaultCaption": "PV Analisis String 3, Voc=734V, Irr = 472 w/m2",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_086",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image89.jpeg",
+    "rId": "rId97",
+    "defaultCaption": "Photo Thermal Imager 1 = Panel DC Combiner Box",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_087",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image90.jpeg",
+    "rId": "rId98",
+    "defaultCaption": "Photo Thermal Imager 2 = Inverter",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_088",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image91.jpeg",
+    "rId": "rId99",
+    "defaultCaption": "Photo Thermal Imager 3 = Panel AC Combiner Box",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_089",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image92.jpeg",
+    "rId": "rId100",
+    "defaultCaption": "Photo IR Thermometer 1 = Panel DC Combiner Box",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_090",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image93.jpeg",
+    "rId": "rId101",
+    "defaultCaption": "Photo IR Thermometer 2 = Inverter",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_091",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image94.jpeg",
+    "rId": "rId102",
+    "defaultCaption": "Photo IR Thermometer 3 = Panel AC Combiner Box",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_092",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image95.jpeg",
+    "rId": "rId103",
+    "defaultCaption": "Photo Pengukuran Grounding dengan Ground Tester 1",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_093",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image96.jpeg",
+    "rId": "rId104",
+    "defaultCaption": "Photo Pengukuran Grounding dengan Ground Tester 2",
+    "defaultDate": "Minggu, 06 September 2026"
+  },
+  {
+    "id": "slot_094",
+    "section": "II.IV. PENGUKURAN PASCA PEMBERSIHAN",
+    "phaseKey": "post_measure",
+    "mediaTarget": "media/image113.jpeg",
+    "rId": "rId113",
+    "defaultCaption": "Tahanan Grounding [Ohm]",
+    "defaultDate": "Minggu, 06 September 2026"
+  }
+]

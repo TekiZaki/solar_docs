@@ -1,0 +1,3 @@
+@echo off
+echo Starting local static server for Solar Docs Web App at http://localhost:3000 ...
+bun -e "Bun.serve({ port: 3000, async fetch(req) { const url = new URL(req.url); let p = './dist' + (url.pathname === '/' ? '/index.html' : url.pathname); const file = Bun.file(p); if (await file.exists()) return new Response(file); return new Response(Bun.file('./dist/index.html')); } }); console.log('Serving http://localhost:3000');"

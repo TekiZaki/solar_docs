@@ -1,0 +1,17 @@
+# Disable directory browsing
+Options -Indexes
+
+# Ensure index.html is served for directory requests
+DirectoryIndex index.html
+
+# PHP configuration for mod_php (if active)
+<IfModule mod_php.c>
+  php_value upload_max_filesize 100M
+  php_value post_max_size 100M
+  php_value memory_limit 256M
+</IfModule>
+<IfModule mod_php7.c>
+  php_value upload_max_filesize 100M
+  php_value post_max_size 100M
+  php_value memory_limit 256M
+</IfModule>
