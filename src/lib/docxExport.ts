@@ -885,16 +885,43 @@ function updateDamageAndRecTables(tables: HTMLCollectionOf<Element>, state: Main
 
   if (dmgTable) {
     const dmgsToUse = state.damages.length > 0 ? state.damages : analysis.detectedDamages;
-    const rows = dmgTable.getElementsByTagNameNS(W_NS, 'tr');
+    const rows = Array.from(dmgTable.getElementsByTagNameNS(W_NS, 'tr'));
     if (rows.length >= 2) {
-      const dmg = dmgsToUse[0];
-      const cells = rows[1].getElementsByTagNameNS(W_NS, 'tc');
-      if (cells.length >= 5) {
-        setTcText(cells[0], dmg.no || '1');
-        setTcText(cells[1], dmg.lokasi || state.location.lokasi || 'Empty');
-        setTcText(cells[2], dmg.kerusakanDiLokasi || 'Tidak Ada');
-        setTcText(cells[3], dmg.updateKerusakan || 'Tidak Ada');
-        setTcText(cells[4], dmg.rekomendasi || dmg.perbaikanYangDilakukan || 'Tidak Ada');
+      const templateRow = rows[1];
+      const fillDmgRow = (row: Element, dmg: typeof dmgsToUse[number], idx: number) => {
+        const cells = row.getElementsByTagNameNS(W_NS, 'tc');
+        if (cells.length >= 5) {
+          setTcText(cells[0], dmg.no || String(idx + 1));
+          setTcText(cells[1], dmg.lokasi || state.location.lokasi || 'Empty');
+          setTcText(cells[2], dmg.kerusakanDiLokasi || 'Tidak Ada');
+          setTcText(cells[3], dmg.updateKerusakan || 'Tidak Ada');
+          setTcText(cells[4], dmg.rekomendasi || dmg.perbaikanYangDilakukan || 'Tidak Ada');
+        }
+      };
+
+      if (dmgsToUse.length === 0) {
+        const cells = templateRow.getElementsByTagNameNS(W_NS, 'tc');
+        if (cells.length >= 5) {
+          setTcText(cells[0], '1');
+          setTcText(cells[1], state.location.lokasi || 'Empty');
+          setTcText(cells[2], 'Tidak Ada');
+          setTcText(cells[3], 'Tidak Ada');
+          setTcText(cells[4], 'Tidak Ada');
+        }
+      } else {
+        dmgsToUse.forEach((dmg, idx) => {
+          let row = rows[1 + idx];
+          if (!row) {
+            row = templateRow.cloneNode(true) as Element;
+            const prev = rows[idx];
+            prev.parentNode?.insertBefore(row, prev.nextSibling);
+            rows.push(row);
+          }
+          fillDmgRow(row, dmg, idx);
+        });
+        for (let r = 1 + dmgsToUse.length; r < rows.length; r++) {
+          rows[r].parentNode?.removeChild(rows[r]);
+        }
       }
     }
   }
