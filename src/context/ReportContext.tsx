@@ -27,6 +27,7 @@ import { createNewCustomSlot, insertSlotInMap, moveSlotInMap } from './slotOpera
 import { createDefaultState } from './reportStateHelpers';
 import { useReportSync } from './useReportSync';
 import { usePhotoSlotActions } from './usePhotoSlotActions';
+import { useReportLock } from './useReportLock';
 import { ReportContext, type ReportSummary } from './reportContextInstance';
 
 export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -42,6 +43,14 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     state, currentReportId, saveStatus, setSaveStatus, lastSavedAt, hasUnsavedChanges,
     applyUpdate, replaceState, loadReport, refreshCurrentReport, saveReportNow, persistNow,
   } = useReportSync(refreshReportList);
+
+  const {
+    deviceId,
+    deviceName,
+    setDeviceName,
+    isLockedByOther,
+    lockOwner,
+  } = useReportLock(currentReportId, refreshCurrentReport);
 
   const { setPhotoSlotImage, setPhotoSlotDataUrl, removePhotoSlotImage } = usePhotoSlotActions({
     currentReportId,
@@ -436,6 +445,11 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deletePhotoSlot,
         migrateImages,
         resetAll,
+        deviceId,
+        deviceName,
+        setDeviceName,
+        isLockedByOther,
+        lockOwner,
       }}
     >
       {children}

@@ -30,6 +30,37 @@ if (!is_dir($dataDir)) {
     mkdir($dataDir, 0777, true);
 }
 
+$locksDir = __DIR__ . '/../data/locks';
+if (!is_dir($locksDir)) {
+    mkdir($locksDir, 0777, true);
+}
+
+const LOCK_TTL_SECONDS = 30;
+
+function readActiveLock(string $locksDir, string $reportId): ?array {
+    if ($reportId === '') return null;
+    $lockFile = $locksDir . '/' . $reportId . '.json';
+    if (!file_exists($lockFile)) return null;
+    $raw = readFileLocked($lockFile);
+    if ($raw === false) return null;
+    $lock = json_decode($raw, true);
+    if (!is_array($lock) || empty($lock['deviceId'])) return null;
+    if ((int)($lock['expiresAt'] ?? 0) <= time()) {
+        @unlink($lockFile);
+        return null;
+    }
+    return $lock;
+}
+
+function isLockedByOtherDevice(string $locksDir, string $reportId, string $deviceId): ?array {
+    if ($deviceId === '' || $reportId === '') return null;
+    $lock = readActiveLock($locksDir, $reportId);
+    if ($lock !== null && $lock['deviceId'] !== $deviceId) {
+        return $lock;
+    }
+    return null;
+}
+
 function sanitizeId(string $raw): string {
     $clean = preg_replace('/[^a-zA-Z0-9_-]/', '_', trim($raw));
     return trim($clean, '_');
@@ -144,6 +175,47 @@ if ($method === 'POST') {
     }
 
     $action = $_GET['action'] ?? ($payload['action'] ?? 'save');
+
+    // 0. Device lease lock management
+    if ($action === 'acquire_lock') {
+        $reportId = sanitizeId($payload['reportId'] ?? '');
+        $deviceId = trim((string)($payload['deviceId'] ?? ''));
+        $deviceName = trim((string)($payload['deviceName'] ?? 'Perangkat Lain'));
+        if ($reportId === '' || $deviceId === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'reportId dan deviceId wajib diisi.']);
+            exit;
+        }
+        $existing = readActiveLock($locksDir, $reportId);
+        if ($existing !== null && $existing['deviceId'] !== $deviceId) {
+            echo json_encode(['acquired' => false, 'lock' => $existing]);
+            exit;
+        }
+        $now = time();
+        $newLock = [
+            'deviceId' => $deviceId,
+            'deviceName' => $deviceName !== '' ? $deviceName : 'Perangkat',
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+            'acquiredAt' => $existing['acquiredAt'] ?? $now,
+            'expiresAt' => $now + LOCK_TTL_SECONDS,
+        ];
+        writeFileAtomic($locksDir . '/' . $reportId . '.json', json_encode($newLock, JSON_PRETTY_PRINT));
+        echo json_encode(['acquired' => true, 'lock' => $newLock]);
+        exit;
+    }
+
+    if ($action === 'release_lock') {
+        $reportId = sanitizeId($payload['reportId'] ?? '');
+        $deviceId = trim((string)($payload['deviceId'] ?? ''));
+        if ($reportId !== '' && $deviceId !== '') {
+            $existing = readActiveLock($locksDir, $reportId);
+            if ($existing !== null && $existing['deviceId'] === $deviceId) {
+                @unlink($locksDir . '/' . $reportId . '.json');
+            }
+        }
+        echo json_encode(['released' => true]);
+        exit;
+    }
 
     // 1. Upload discrete image file
     if ($action === 'upload_image') {
@@ -327,6 +399,17 @@ if ($method === 'POST') {
 
     // 5. Default: Save state JSON
     $id = sanitizeId($payload['id'] ?? 'REPORT_MT_PLTS_JKT_SMPN_72');
+    $deviceId = trim((string)($payload['deviceId'] ?? ''));
+    $otherLock = isLockedByOtherDevice($locksDir, $id, $deviceId);
+    if ($otherLock !== null) {
+        http_response_code(423);
+        echo json_encode([
+            'error' => 'Berkas sedang dipakai oleh ' . ($otherLock['deviceName'] ?? 'perangkat lain') . '.',
+            'locked' => true,
+            'lock' => $otherLock,
+        ]);
+        exit;
+    }
     $targetFile = $dataDir . '/' . $id . '.json';
 
     $state = $payload['state'] ?? $payload;

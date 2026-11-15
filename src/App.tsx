@@ -28,12 +28,97 @@ import { useReport } from './context/useReport';
 
 type ViewMode = 'home' | 'general_info' | 'phase_select' | 'active_phase' | 'settings';
 
+const RAW_BASE = import.meta.env.BASE_URL || '/';
+const NORMALIZED_BASE = RAW_BASE.endsWith('/') ? RAW_BASE : `${RAW_BASE}/`;
+
+const PHASE_SLUGS: Record<MaintenancePhaseKey, string> = {
+  physical: 'pengecekan_kondisi',
+  pre_measure: 'pengukuran_pra',
+  cleaning: 'pembersihan',
+  post_measure: 'pengukuran_pasca',
+  analysis: 'analisa_performa',
+  damage_rec: 'kesimpulan_rekomendasi',
+};
+
+const SLUG_TO_PHASE: Record<string, MaintenancePhaseKey> = Object.fromEntries(
+  Object.entries(PHASE_SLUGS).map(([k, v]) => [v, k as MaintenancePhaseKey])
+);
+
+function parseRouteFromPath(pathname: string): { view: ViewMode; phase?: MaintenancePhaseKey } {
+  let rel = pathname;
+  if (NORMALIZED_BASE !== '/' && rel.startsWith(NORMALIZED_BASE.slice(0, -1))) {
+    rel = rel.slice(NORMALIZED_BASE.length - 1);
+  }
+  const slug = rel.replace(/^\/+|\/+$/g, '').toLowerCase();
+  if (!slug) return { view: 'home' };
+  if (slug === 'informasi_umum') return { view: 'general_info' };
+  if (slug === 'pilih_fase') return { view: 'phase_select' };
+  if (slug === 'pengaturan') return { view: 'settings' };
+  const phase = SLUG_TO_PHASE[slug];
+  if (phase) return { view: 'active_phase', phase };
+  return { view: 'home' };
+}
+
+function buildPathFromRoute(view: ViewMode, phase: MaintenancePhaseKey): string {
+  switch (view) {
+    case 'home':
+      return NORMALIZED_BASE;
+    case 'general_info':
+      return `${NORMALIZED_BASE}informasi_umum/`;
+    case 'phase_select':
+      return `${NORMALIZED_BASE}pilih_fase/`;
+    case 'settings':
+      return `${NORMALIZED_BASE}pengaturan/`;
+    case 'active_phase':
+      return `${NORMALIZED_BASE}${PHASE_SLUGS[phase]}/`;
+  }
+}
+
 export const AppContent: React.FC = () => {
-  const { state, saveReportNow, refreshCurrentReport, hasUnsavedChanges } = useReport();
-  const [currentView, setCurrentView] = useState<ViewMode>('home');
-  const [selectedPhase, setSelectedPhase] = useState<MaintenancePhaseKey>('physical');
+  const {
+    state,
+    saveReportNow,
+    refreshCurrentReport,
+    hasUnsavedChanges,
+    deviceName,
+    setDeviceName,
+    isLockedByOther,
+    lockOwner,
+  } = useReport();
+  const initialRoute = React.useMemo(() => parseRouteFromPath(window.location.pathname), []);
+  const [currentView, setCurrentView] = useState<ViewMode>(initialRoute.view);
+  const [selectedPhase, setSelectedPhase] = useState<MaintenancePhaseKey>(
+    initialRoute.phase ?? 'physical'
+  );
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isMissingModalOpen, setIsMissingModalOpen] = useState(false);
+  const isPoppingRef = React.useRef(false);
+
+  // Sync URL pathname with current view and phase
+  React.useEffect(() => {
+    if (isPoppingRef.current) {
+      isPoppingRef.current = false;
+      return;
+    }
+    const targetPath = buildPathFromRoute(currentView, selectedPhase);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath + window.location.search);
+    }
+  }, [currentView, selectedPhase]);
+
+  // Handle browser back/forward navigation
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const next = parseRouteFromPath(window.location.pathname);
+      isPoppingRef.current = true;
+      setCurrentView(next.view);
+      if (next.phase) {
+        setSelectedPhase(next.phase);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Fetch new data immediately when navigating to another view or phase (skipped while edits are unsaved)
   const isInitialNav = React.useRef(true);
@@ -147,18 +232,33 @@ export const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setCurrentView('settings')}
-              aria-label="Pengaturan dan Reset"
-              title="Pengaturan dan Reset Berkas"
-              className="w-9 h-9 rounded-lg border border-black bg-white hover:bg-slate-100 flex items-center justify-center text-slate-800 transition shadow-sm"
-            >
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = window.prompt('Nama Perangkat / Teknisi:', deviceName);
+                  if (next !== null && next.trim()) setDeviceName(next);
+                }}
+                title="Klik untuk ubah nama perangkat"
+                className="h-9 px-2.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 flex items-center gap-1.5 max-w-[180px]"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="truncate">{deviceName}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentView('settings')}
+                aria-label="Pengaturan dan Reset"
+                title="Pengaturan dan Reset Berkas"
+                className="w-9 h-9 rounded-lg border border-black bg-white hover:bg-slate-100 flex items-center justify-center text-slate-800 transition shadow-sm"
+              >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-            </button>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -266,10 +366,28 @@ export const AppContent: React.FC = () => {
         }
       />
 
+      {/* Read-Only Lock Banner when another device holds the active lease */}
+      {isLockedByOther && (
+        <div className="bg-amber-100 border-b border-black px-4 py-2 text-xs text-amber-950 font-medium">
+          <div className="w-full md:w-[90vw] min-w-90vw mx-auto flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Berkas ini sedang dipakai oleh <strong>{lockOwner?.deviceName || 'perangkat lain'}</strong>
+              {lockOwner?.ip ? ` (${lockOwner.ip})` : ''}. Mode hanya baca aktif hingga perangkat tersebut selesai.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Main Workflow View Routing */}
       <main className="w-full md:w-[90vw] min-w-90vw mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-8 md:pb-6 flex-1">
         {currentView === 'settings' && (
-          <ResetPage onBack={() => setCurrentView('home')} />
+          <div
+            className={isLockedByOther ? 'pointer-events-none select-none opacity-55 grayscale-[40%]' : undefined}
+            aria-disabled={isLockedByOther || undefined}
+            onFocusCapture={isLockedByOther ? (e) => (e.target as HTMLElement).blur?.() : undefined}
+          >
+            <ResetPage onBack={() => setCurrentView('home')} />
+          </div>
         )}
 
         {currentView === 'general_info' && (
@@ -290,7 +408,13 @@ export const AppContent: React.FC = () => {
                 Langsung ke Pilihan Tahap &rarr;
               </button>
             </div>
-            <GeneralInfo onContinueToPhases={() => setCurrentView('phase_select')} />
+            <div
+              className={isLockedByOther ? 'pointer-events-none select-none opacity-55 grayscale-[40%]' : undefined}
+              aria-disabled={isLockedByOther || undefined}
+              onFocusCapture={isLockedByOther ? (e) => (e.target as HTMLElement).blur?.() : undefined}
+            >
+              <GeneralInfo onContinueToPhases={() => setCurrentView('phase_select')} />
+            </div>
           </div>
         )}
 
@@ -348,8 +472,13 @@ export const AppContent: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => saveReportNow()}
-                  title="Simpan sekarang (Ctrl+S)"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-black text-xs font-semibold px-3 py-1.5 rounded shadow-sm transition flex items-center gap-1.5 border border-black"
+                  disabled={isLockedByOther}
+                  title={isLockedByOther ? 'Mode hanya baca' : 'Simpan sekarang (Ctrl+S)'}
+                  className={`text-black text-xs font-semibold px-3 py-1.5 rounded shadow-sm transition flex items-center gap-1.5 border border-black ${
+                    isLockedByOther
+                      ? 'bg-slate-200 opacity-50 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -366,12 +495,18 @@ export const AppContent: React.FC = () => {
             />
 
             {/* Only Render The Selected Phase Component (All Others Hidden) */}
-            {selectedPhase === 'physical' && <PhasePhysical />}
-            {selectedPhase === 'pre_measure' && <PhasePreMeasure />}
-            {selectedPhase === 'cleaning' && <PhaseCleaning />}
-            {selectedPhase === 'post_measure' && <PhasePostMeasure />}
-            {selectedPhase === 'analysis' && <PhaseAnalysis />}
-            {selectedPhase === 'damage_rec' && <PhaseDamageRec />}
+            <div
+              className={isLockedByOther ? 'pointer-events-none select-none opacity-55 grayscale-[40%]' : undefined}
+              aria-disabled={isLockedByOther || undefined}
+              onFocusCapture={isLockedByOther ? (e) => (e.target as HTMLElement).blur?.() : undefined}
+            >
+              {selectedPhase === 'physical' && <PhasePhysical />}
+              {selectedPhase === 'pre_measure' && <PhasePreMeasure />}
+              {selectedPhase === 'cleaning' && <PhaseCleaning />}
+              {selectedPhase === 'post_measure' && <PhasePostMeasure />}
+              {selectedPhase === 'analysis' && <PhaseAnalysis />}
+              {selectedPhase === 'damage_rec' && <PhaseDamageRec />}
+            </div>
           </div>
         )}
       </main>
@@ -381,8 +516,13 @@ export const AppContent: React.FC = () => {
         <button
           type="button"
           onClick={() => saveReportNow()}
-          title="Simpan (Ctrl+S)"
-          className="bg-emerald-600 hover:bg-emerald-700 text-black text-xs font-semibold px-3 py-2 rounded shadow-sm flex items-center gap-1.5 shrink-0 border border-black"
+          disabled={isLockedByOther}
+          title={isLockedByOther ? 'Mode hanya baca' : 'Simpan (Ctrl+S)'}
+          className={`text-black text-xs font-semibold px-3 py-2 rounded shadow-sm flex items-center gap-1.5 shrink-0 border border-black ${
+            isLockedByOther
+              ? 'bg-slate-200 opacity-50 cursor-not-allowed'
+              : 'bg-emerald-600 hover:bg-emerald-700'
+          }`}
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />

@@ -20,6 +20,7 @@ import type {
   DamageItem, TechnicalRecommendationItem,
   RecommendationItem,
 } from '../types/schema';
+import type { ReportLockInfo } from '../lib/reportApi';
 
 export interface ReportSummary {
   id: string;
@@ -95,6 +96,11 @@ export interface ReportContextType {
   deletePhotoSlot: (slotId: string) => void;
   migrateImages: () => Promise<{ success: boolean; convertedCount: number; newSizeBytes?: number }>;
   resetAll: (targetId?: string) => Promise<boolean>;
+  deviceId: string;
+  deviceName: string;
+  setDeviceName: (name: string) => void;
+  isLockedByOther: boolean;
+  lockOwner: ReportLockInfo | null;
 }
 
 export const ReportContext = createContext<ReportContextType | null>(null);

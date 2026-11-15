@@ -9,8 +9,64 @@
 
 import type { MaintenanceReportState } from '../types/schema';
 import type { ReportSummary } from '../context/reportContextInstance';
+import { getDeviceId } from './deviceIdentity';
 
 const API_ENDPOINT = `${import.meta.env.BASE_URL}api/reports.php`;
+
+export interface ReportLockInfo {
+  deviceId: string;
+  deviceName: string;
+  ip?: string;
+  acquiredAt?: number;
+  expiresAt: number;
+}
+
+export async function acquireReportLock(
+  reportId: string,
+  deviceId: string,
+  deviceName: string
+): Promise<{ acquired: boolean; lock: ReportLockInfo | null } | null> {
+  try {
+    const res = await fetch(`${API_ENDPOINT}?action=acquire_lock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reportId, deviceId, deviceName }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      acquired: Boolean(data.acquired),
+      lock: (data.lock as ReportLockInfo) || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function releaseReportLock(reportId: string, deviceId: string): Promise<void> {
+  try {
+    await fetch(`${API_ENDPOINT}?action=release_lock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reportId, deviceId }),
+    });
+  } catch {
+    // ignore release errors on unmount/network loss
+  }
+}
+
+export function releaseReportLockBeacon(reportId: string, deviceId: string): void {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([JSON.stringify({ reportId, deviceId })], {
+        type: 'application/json',
+      });
+      navigator.sendBeacon(`${API_ENDPOINT}?action=release_lock`, blob);
+    }
+  } catch {
+    // ignore beacon errors
+  }
+}
 
 export async function uploadSlotImage(
   reportId: string,
@@ -142,7 +198,8 @@ function sanitizeStateForSave(reportState: MaintenanceReportState): MaintenanceR
 
 export async function saveReportState(
   id: string,
-  reportState: MaintenanceReportState
+  reportState: MaintenanceReportState,
+  deviceId: string = getDeviceId()
 ): Promise<boolean> {
   try {
     const sanitizedState = sanitizeStateForSave(reportState);
@@ -152,6 +209,7 @@ export async function saveReportState(
       body: JSON.stringify({
         id,
         name: id.replace(/_/g, ' '),
+        deviceId,
         state: sanitizedState,
       }),
     });

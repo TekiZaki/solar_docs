@@ -23,7 +23,21 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMissingItems,
   currentPhaseTitle,
 }) => {
-  const { state, saveReportNow, saveStatus } = useReport();
+  const {
+    state,
+    saveReportNow,
+    saveStatus,
+    deviceName,
+    setDeviceName,
+    isLockedByOther,
+  } = useReport();
+
+  const handleRenameDevice = () => {
+    const next = window.prompt('Nama Perangkat / Teknisi:', deviceName);
+    if (next !== null && next.trim()) {
+      setDeviceName(next);
+    }
+  };
 
   const totalSlots = Object.keys(state.photoSlots).length;
   const uploadedCount = Object.values(state.photoSlots).filter((s) => s.isUploaded).length;
@@ -57,6 +71,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Actions & Status */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+          <button
+            type="button"
+            onClick={handleRenameDevice}
+            title="Klik untuk ubah nama perangkat"
+            className="h-9 inline-flex items-center gap-1.5 px-2.5 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-[11px] font-medium text-slate-700 transition max-w-[160px]"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLockedByOther ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+            <span className="truncate">{deviceName}</span>
+          </button>
+
           <div className="hidden lg:flex flex-col justify-center text-right h-9 rounded border border-black px-2.5 bg-white">
             <span className="text-xs font-semibold text-black truncate max-w-[180px] leading-tight">
               {state.location.lokasi || 'Belum Ada Lokasi'}
@@ -102,8 +126,17 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => saveReportNow()}
-            className="hidden md:inline-flex h-9 bg-emerald-600 hover:bg-emerald-700 text-black text-xs font-semibold px-3 rounded shadow-sm transition items-center justify-center gap-1.5 border border-black"
-            title="Simpan perubahan langsung ke berkas JSON server (Ctrl+S)"
+            disabled={isLockedByOther}
+            className={`hidden md:inline-flex h-9 text-black text-xs font-semibold px-3 rounded shadow-sm transition items-center justify-center gap-1.5 border border-black ${
+              isLockedByOther
+                ? 'bg-slate-200 opacity-50 cursor-not-allowed'
+                : 'bg-emerald-600 hover:bg-emerald-700'
+            }`}
+            title={
+              isLockedByOther
+                ? 'Mode hanya baca (berkas dipakai perangkat lain)'
+                : 'Simpan perubahan langsung ke berkas JSON server (Ctrl+S)'
+            }
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
