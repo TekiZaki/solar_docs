@@ -24,9 +24,10 @@ import { ExportModal } from './components/common/ExportModal';
 import { MissingItemsModal } from './components/common/MissingItemsModal';
 import { ScrollButtons } from './components/common/ScrollButtons';
 import { ResetPage } from './components/pages/ResetPage';
+import { JsonExplorerPage } from './components/pages/JsonExplorerPage';
 import { useReport } from './context/useReport';
 
-type ViewMode = 'home' | 'general_info' | 'phase_select' | 'active_phase' | 'settings';
+type ViewMode = 'home' | 'general_info' | 'phase_select' | 'active_phase' | 'settings' | 'json_explorer';
 
 const RAW_BASE = import.meta.env.BASE_URL || '/';
 const NORMALIZED_BASE = RAW_BASE.endsWith('/') ? RAW_BASE : `${RAW_BASE}/`;
@@ -54,6 +55,7 @@ function parseRouteFromPath(pathname: string): { view: ViewMode; phase?: Mainten
   if (slug === 'informasi_umum') return { view: 'general_info' };
   if (slug === 'pilih_fase') return { view: 'phase_select' };
   if (slug === 'pengaturan') return { view: 'settings' };
+  if (slug === 'json') return { view: 'json_explorer' };
   const phase = SLUG_TO_PHASE[slug];
   if (phase) return { view: 'active_phase', phase };
   return { view: 'home' };
@@ -69,6 +71,8 @@ function buildPathFromRoute(view: ViewMode, phase: MaintenancePhaseKey): string 
       return `${NORMALIZED_BASE}pilih_fase/`;
     case 'settings':
       return `${NORMALIZED_BASE}pengaturan/`;
+    case 'json_explorer':
+      return `${NORMALIZED_BASE}json/`;
     case 'active_phase':
       return `${NORMALIZED_BASE}${PHASE_SLUGS[phase]}/`;
   }
@@ -95,9 +99,11 @@ export const AppContent: React.FC = () => {
   const [isMissingModalOpen, setIsMissingModalOpen] = useState(false);
   const isPoppingRef = React.useRef(false);
 
-  // Only hold a report lock when inside an active report view (release on home/settings)
+  // Only hold a report lock when inside an active report view (release on home/settings/json)
   React.useEffect(() => {
-    setLockActive(currentView !== 'home' && currentView !== 'settings');
+    setLockActive(
+      currentView !== 'home' && currentView !== 'settings' && currentView !== 'json_explorer'
+    );
   }, [currentView, setLockActive]);
 
   // Sync URL pathname with current view and phase
@@ -239,6 +245,17 @@ export const AppContent: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('json_explorer')}
+                  title="Lihat dan edit seluruh berkas JSON"
+                  className="h-9 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-medium text-slate-800 transition shadow-sm"
+                >
+                  Data JSON
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
@@ -252,18 +269,20 @@ export const AppContent: React.FC = () => {
                 <span className="truncate">{deviceName}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setCurrentView('settings')}
-                aria-label="Pengaturan dan Reset"
-                title="Pengaturan dan Reset Berkas"
-                className="w-9 h-9 rounded-lg border border-black bg-white hover:bg-slate-100 flex items-center justify-center text-slate-800 transition shadow-sm"
-              >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              </button>
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('settings')}
+                  aria-label="Pengaturan dan Reset"
+                  title="Pengaturan dan Reset Berkas"
+                  className="w-9 h-9 rounded-lg border border-black bg-white hover:bg-slate-100 flex items-center justify-center text-slate-800 transition shadow-sm"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -352,6 +371,10 @@ export const AppContent: React.FC = () => {
         <ScrollButtons />
       </div>
     );
+  }
+
+  if (currentView === 'json_explorer') {
+    return <JsonExplorerPage onBack={() => setCurrentView('home')} />;
   }
 
   return (
