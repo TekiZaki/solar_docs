@@ -84,6 +84,7 @@ export interface ReportContextType {
   updateRecommendation: (id: string, fields: Partial<RecommendationItem>) => void;
   deleteRecommendation: (id: string) => void;
   setHidePVAnalisis: (hide: boolean) => void;
+  setHideFieldComparisonTable: (hide: boolean) => void;
   setCustomFileName: (fileName: string) => void;
   addPhotoSlot: (
     phaseKey: PhotoSlot['phaseKey'],

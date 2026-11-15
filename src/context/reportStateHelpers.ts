@@ -41,6 +41,7 @@ export function createDefaultState(): MaintenanceReportState {
     recommendations: DEFAULT_RECOMMENDATIONS,
     technicalRecommendations: [],
     hidePVAnalisis: false,
+    hideFieldComparisonTable: false,
     customFileName: `${DEFAULT_REPORT_ID}.docx`,
   };
 }
@@ -92,6 +93,7 @@ export function mergeStateWithSlots(parsed: Partial<MaintenanceReportState> & { 
       : [],
     analysisNarrative: parsed.analysisNarrative,
     hidePVAnalisis: Boolean(parsed.hidePVAnalisis),
+    hideFieldComparisonTable: Boolean(parsed.hideFieldComparisonTable),
     customFileName,
   };
 }

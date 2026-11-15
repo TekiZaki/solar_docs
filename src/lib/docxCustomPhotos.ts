@@ -131,20 +131,25 @@ export async function injectCustomPhotos(
   state: MaintenanceReportState,
   plBytes: Uint8Array
 ): Promise<void> {
-  const customSlots = Object.values(state.photoSlots).filter((s) => s.isCustom);
-  if (customSlots.length === 0) return;
+  const customSlots = Object.values(state.photoSlots).filter(
+    (s) => s.isCustom && !s.excludeFromDocx
+  );
+  const hasAnyExclusion = Object.values(state.photoSlots).some((s) => s.excludeFromDocx);
+  if (customSlots.length === 0 && !hasAnyExclusion) return;
 
-  let relsXml = (await zip.file('word/_rels/document.xml.rels')?.async('string')) || '';
-  for (const slot of customSlots) {
-    const zipPath = `word/${slot.mediaTarget}`;
-    const bytes = await resolveSlotBytes(slot, plBytes);
-    zip.file(zipPath, bytes);
-    if (!relsXml.includes(`Id="${slot.rId}"`)) {
-      const relTag = `<Relationship Id="${slot.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${slot.mediaTarget}"/>\n</Relationships>`;
-      relsXml = relsXml.replace('</Relationships>', relTag);
+  if (customSlots.length > 0) {
+    let relsXml = (await zip.file('word/_rels/document.xml.rels')?.async('string')) || '';
+    for (const slot of customSlots) {
+      const zipPath = `word/${slot.mediaTarget}`;
+      const bytes = await resolveSlotBytes(slot, plBytes);
+      zip.file(zipPath, bytes);
+      if (!relsXml.includes(`Id="${slot.rId}"`)) {
+        const relTag = `<Relationship Id="${slot.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${slot.mediaTarget}"/>\n</Relationships>`;
+        relsXml = relsXml.replace('</Relationships>', relTag);
+      }
     }
+    zip.file('word/_rels/document.xml.rels', relsXml);
   }
-  zip.file('word/_rels/document.xml.rels', relsXml);
 
   const template2Photo = tables[29]?.cloneNode(true) as Element | undefined;
 
@@ -154,7 +159,7 @@ export async function injectCustomPhotos(
   for (const phaseKey of phases) {
     const phaseSlots = Object.values(state.photoSlots).filter((s) => s.phaseKey === phaseKey);
     // Untouched phases keep byte-identical template pairing
-    if (!phaseSlots.some((s) => s.isCustom)) continue;
+    if (!phaseSlots.some((s) => s.isCustom || s.excludeFromDocx)) continue;
 
     // Template tables of this phase in document order
     const seen = new Set<Element>();
@@ -171,19 +176,36 @@ export async function injectCustomPhotos(
 
     // Flat saved order fills template cells sequentially, so a custom card
     // lands exactly where the webapp shows it instead of after its table
+    const includedSlots = phaseSlots.filter((s) => !s.excludeFromDocx);
     const positions = collectPhasePhotoPositions(phaseTables);
     const overflow: PhotoSlot[] = [];
-    phaseSlots.forEach((slot, idx) => {
-      if (idx < positions.length) {
-        setDrawingBlip(positions[idx].drawing, slot.rId);
-        setTcText(positions[idx].dateCell, slot.date);
-        setTcText(positions[idx].capCell, slot.caption);
+    positions.forEach((pos, idx) => {
+      if (idx < includedSlots.length) {
+        const slot = includedSlots[idx];
+        setDrawingBlip(pos.drawing, slot.rId);
+        setTcText(pos.dateCell, slot.date);
+        setTcText(pos.capCell, slot.caption);
       } else {
-        overflow.push(slot);
+        pos.drawing.parentNode?.removeChild(pos.drawing);
+        setTcText(pos.dateCell, '', true);
+        setTcText(pos.capCell, '', true);
       }
     });
+    for (let idx = positions.length; idx < includedSlots.length; idx++) {
+      overflow.push(includedSlots[idx]);
+    }
 
-    let anchor: Element = phaseTables[phaseTables.length - 1];
+    // Remove template tables that became completely empty due to exclusions
+    let lastRemainingTable: Element | undefined;
+    for (const tbl of phaseTables) {
+      if (tbl.getElementsByTagNameNS(W_NS, 'drawing').length === 0) {
+        tbl.parentNode?.removeChild(tbl);
+      } else {
+        lastRemainingTable = tbl;
+      }
+    }
+
+    let anchor: Element = lastRemainingTable || phaseTables[phaseTables.length - 1];
     for (let c = 0; c < overflow.length; c += 2) {
       anchor = fillOverflowPair(template2Photo, anchor, overflow[c], overflow[c + 1]);
     }

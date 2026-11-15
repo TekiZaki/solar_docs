@@ -226,7 +226,7 @@ function updatePhotoCaptionsAndDates(tables: HTMLCollectionOf<Element>, state: M
     const rows = tbl.getElementsByTagNameNS(W_NS, 'tr');
     for (let rIdx = 0; rIdx < rows.length; rIdx++) {
       const r = rows[rIdx];
-      const drawings = r.getElementsByTagNameNS(W_NS, 'drawing');
+      const drawings = Array.from(r.getElementsByTagNameNS(W_NS, 'drawing'));
       if (drawings.length === 0 || rIdx + 1 >= rows.length) continue;
 
       const capRow = rows[rIdx + 1];
@@ -255,11 +255,17 @@ function updatePhotoCaptionsAndDates(tables: HTMLCollectionOf<Element>, state: M
         const matchingSlotMeta = PHOTO_SLOTS_CATALOG.find((s) => s.rId === embed);
         if (!matchingSlotMeta) continue;
 
+        const currentSlot = state.photoSlots[matchingSlotMeta.id];
+        if (currentSlot?.excludeFromDocx) {
+          drawings[dIdx].parentNode?.removeChild(drawings[dIdx]);
+          updateDrawingCaption(capCells, dIdx, '', '');
+          continue;
+        }
+
         if (matchingSlotMeta.phaseKey !== 'general') {
           applyDrawingExtents(drawings[dIdx]);
         }
 
-        const currentSlot = state.photoSlots[matchingSlotMeta.id];
         const dateVal = currentSlot ? currentSlot.date : matchingSlotMeta.defaultDate;
         const capVal = currentSlot ? currentSlot.caption : matchingSlotMeta.defaultCaption;
 
@@ -341,11 +347,11 @@ function updateMeasurementTable(tbl: Element, state: MaintenanceReportState, isA
     isAfter ? m.hasilAfter : m.hasilBefore;
 
   // Vmp / Imp / Voc groups in saved state order so inserted custom rows keep placement
-  const vmpItems = state.measurements.filter((m) => m.id.startsWith('dc_vmp_'));
-  const impItems = state.measurements.filter((m) => m.id.startsWith('dc_imp_'));
+  const vmpItems = state.measurements.filter((m) => m.id.startsWith('dc_vmp_') && !m.excludeFromDocx);
+  const impItems = state.measurements.filter((m) => m.id.startsWith('dc_imp_') && !m.excludeFromDocx);
   const vocItems = state.hidePVAnalisis
     ? []
-    : state.measurements.filter((m) => m.id.startsWith('dc_voc_'));
+    : state.measurements.filter((m) => m.id.startsWith('dc_voc_') && !m.excludeFromDocx);
 
   // AC side first: extra DC row insertions below shift live row indices,
   // so fixed-index AC writes must happen while the template layout is intact
@@ -359,7 +365,13 @@ function updateMeasurementTable(tbl: Element, state: MaintenanceReportState, isA
       const cells = row.getElementsByTagNameNS(W_NS, 'tc');
       const item = state.measurements.find((m) => m.id === mId);
       if (item && cells.length >= 7) {
-        setTcText(cells[6], isAfter ? item.hasilAfter : item.hasilBefore);
+        if (item.excludeFromDocx) {
+          setTcText(cells[4], '', true);
+          setTcText(cells[5], '', true);
+          setTcText(cells[6], '', true);
+        } else {
+          setTcText(cells[6], isAfter ? item.hasilAfter : item.hasilBefore);
+        }
       }
     }
   }
@@ -368,12 +380,18 @@ function updateMeasurementTable(tbl: Element, state: MaintenanceReportState, isA
   for (let i = 0; i < 3; i++) {
     const row = mRows[3 + i];
     const item = vmpItems[i];
-    if (!row || !item) continue;
+    if (!row) continue;
     const cells = row.getElementsByTagNameNS(W_NS, 'tc');
     if (cells.length >= 3 && dataTemplateCells.length >= 3) {
-      applyCellFromTemplate(cells[0], dataTemplateCells[0], item.no);
-      applyCellFromTemplate(cells[1], dataTemplateCells[1], item.parameter);
-      applyCellFromTemplate(cells[2], dataTemplateCells[2], pickHasil(item), true);
+      if (item) {
+        applyCellFromTemplate(cells[0], dataTemplateCells[0], item.no);
+        applyCellFromTemplate(cells[1], dataTemplateCells[1], item.parameter);
+        applyCellFromTemplate(cells[2], dataTemplateCells[2], pickHasil(item), true);
+      } else {
+        applyCellFromTemplate(cells[0], dataTemplateCells[0], '', true);
+        applyCellFromTemplate(cells[1], dataTemplateCells[1], '', true);
+        applyCellFromTemplate(cells[2], dataTemplateCells[2], '', true);
+      }
     }
   }
 
@@ -381,12 +399,18 @@ function updateMeasurementTable(tbl: Element, state: MaintenanceReportState, isA
   for (let i = 0; i < 3; i++) {
     const row = mRows[7 + i];
     const item = impItems[i];
-    if (!row || !item) continue;
+    if (!row) continue;
     const cells = row.getElementsByTagNameNS(W_NS, 'tc');
     if (cells.length >= 3 && dataTemplateCells.length >= 3) {
-      applyCellFromTemplate(cells[0], dataTemplateCells[0], item.no);
-      applyCellFromTemplate(cells[1], dataTemplateCells[1], item.parameter);
-      applyCellFromTemplate(cells[2], dataTemplateCells[2], pickHasil(item), true);
+      if (item) {
+        applyCellFromTemplate(cells[0], dataTemplateCells[0], item.no);
+        applyCellFromTemplate(cells[1], dataTemplateCells[1], item.parameter);
+        applyCellFromTemplate(cells[2], dataTemplateCells[2], pickHasil(item), true);
+      } else {
+        applyCellFromTemplate(cells[0], dataTemplateCells[0], '', true);
+        applyCellFromTemplate(cells[1], dataTemplateCells[1], '', true);
+        applyCellFromTemplate(cells[2], dataTemplateCells[2], '', true);
+      }
     }
   }
 
@@ -544,9 +568,11 @@ function appendStandardColumn(tbl: Element, standardsInRowOrder: string[]) {
 }
 
 function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: MaintenanceReportState) {
-  const vmpItems = state.measurements.filter((m) => m.id.startsWith('dc_vmp_'));
-  const impItems = state.measurements.filter((m) => m.id.startsWith('dc_imp_'));
-  const vocItems = state.measurements.filter((m) => m.id.startsWith('dc_voc_'));
+  const vmpItems = state.measurements.filter((m) => m.id.startsWith('dc_vmp_') && !m.excludeFromDocx);
+  const impItems = state.measurements.filter((m) => m.id.startsWith('dc_imp_') && !m.excludeFromDocx);
+  const vocItems = state.hidePVAnalisis
+    ? []
+    : state.measurements.filter((m) => m.id.startsWith('dc_voc_') && !m.excludeFromDocx);
 
   const fillCompRow = (row: Element, no: string, parameter: string, before: string, after: string, standard = '', blank = false) => {
     const cells = row.getElementsByTagNameNS(W_NS, 'tc');
@@ -573,12 +599,21 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
     const dataSrc = rows[10];
     const lastImpRowInitial = rows[rows.length - 1];
     // Fixed Vmp rows 4-6 and Imp rows 8-10 follow saved state order with labels
+    const rowsToRemove: Element[] = [];
     for (let i = 0; i < 3; i++) {
-      if (vmpItems[i] && rows[4 + i]) {
-        fillCompRow(rows[4 + i], vmpItems[i].no, vmpItems[i].parameter, vmpItems[i].hasilBefore, vmpItems[i].hasilAfter, vmpItems[i].standard ?? '');
+      if (rows[4 + i]) {
+        if (vmpItems[i]) {
+          fillCompRow(rows[4 + i], vmpItems[i].no, vmpItems[i].parameter, vmpItems[i].hasilBefore, vmpItems[i].hasilAfter, vmpItems[i].standard ?? '');
+        } else {
+          rowsToRemove.push(rows[4 + i]);
+        }
       }
-      if (impItems[i] && rows[8 + i]) {
-        fillCompRow(rows[8 + i], impItems[i].no, impItems[i].parameter, impItems[i].hasilBefore, impItems[i].hasilAfter, impItems[i].standard ?? '');
+      if (rows[8 + i]) {
+        if (impItems[i]) {
+          fillCompRow(rows[8 + i], impItems[i].no, impItems[i].parameter, impItems[i].hasilBefore, impItems[i].hasilAfter, impItems[i].standard ?? '');
+        } else {
+          rowsToRemove.push(rows[8 + i]);
+        }
       }
     }
 
@@ -628,6 +663,9 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
         }
       }
     }
+    for (const r of rowsToRemove) {
+      r.parentNode?.removeChild(r);
+    }
   };
 
   if (tables.length > 53) fillDcTable(tables[53]);
@@ -640,12 +678,15 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
       'ac_v_rn', 'ac_v_sn', 'ac_v_tn', 'ac_v_ng', 'ac_v_rs',
       'ac_v_rt', 'ac_v_st', 'ac_i_r', 'ac_i_s', 'ac_i_t', 'ac_freq',
     ];
+    const acRowsToRemove: Element[] = [];
     compAcIds.forEach((mId, i) => {
       const row = t54Rows[3 + i];
       if (row) {
         const cells = row.getElementsByTagNameNS(W_NS, 'tc');
         const item = state.measurements.find((m) => m.id === mId);
-        if (item && cells.length >= 4) {
+        if (item?.excludeFromDocx) {
+          acRowsToRemove.push(row);
+        } else if (item && cells.length >= 4) {
           setTcText(cells[0], item.no);
           setTcText(cells[1], item.parameter);
           setTcText(cells[2], item.hasilBefore);
@@ -656,7 +697,7 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
     // Custom AC rows appended after the fixed frequency row
     const fixedAcIds = new Set(compAcIds);
     const acExtras = state.measurements.filter(
-      (m) => m.id.startsWith('ac_') && !fixedAcIds.has(m.id)
+      (m) => m.id.startsWith('ac_') && !fixedAcIds.has(m.id) && !m.excludeFromDocx
     );
     const acAnchorSrc = t54Rows[t54Rows.length - 1];
     if (acAnchorSrc && acExtras.length > 0) {
@@ -668,6 +709,9 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
         if (parent) parent.insertBefore(clone, anchor.nextSibling);
         anchor = clone;
       }
+    }
+    for (const r of acRowsToRemove) {
+      r.parentNode?.removeChild(r);
     }
     const finalRows = t54.getElementsByTagNameNS(W_NS, 'tr');
     const standards: string[] = [];
@@ -683,9 +727,11 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
   if (tables.length > 55) {
     const t55 = tables[55];
     const t55Rows = t55.getElementsByTagNameNS(W_NS, 'tr');
-    const groundItems = state.measurements.filter((m) => m.id.startsWith('ground_'));
+    const groundItems = state.measurements.filter((m) => m.id.startsWith('ground_') && !m.excludeFromDocx);
     if (groundItems[0] && t55Rows.length >= 4) {
       fillCompRow(t55Rows[3], groundItems[0].no, groundItems[0].parameter, groundItems[0].hasilBefore, groundItems[0].hasilAfter);
+    } else if (groundItems.length === 0 && t55Rows.length >= 4) {
+      t55Rows[3].parentNode?.removeChild(t55Rows[3]);
     }
     if (groundItems.length > 1 && t55Rows.length >= 4) {
       let anchor: Element = t55Rows[3];
@@ -747,36 +793,41 @@ function updateSTCTables(tables: HTMLCollectionOf<Element>, state: MaintenanceRe
     }
   }
 
+  const t58 = tables.length > 58 ? tables[58] : undefined;
+  const t59 = tables.length > 59 ? tables[59] : undefined;
+
   // Table 58: Field Data comparison vs STC
-  if (tables.length > 58) {
-    const t58 = tables[58];
-    const rows = t58.getElementsByTagNameNS(W_NS, 'tr');
-    if (rows.length >= 5) {
-      analysis.strings.forEach((s, idx) => {
-        if (rows[1 + idx]) {
-          const cells = rows[1 + idx].getElementsByTagNameNS(W_NS, 'tc');
-          if (cells.length >= 5) {
-            setTcText(cells[0], s.name);
-            setTcText(cells[1], `${s.voc} V`);
-            setTcText(cells[2], `${s.irr} W/m²`);
-            setTcText(cells[3], `${s.vmp} V`);
-            setTcText(cells[4], `${s.deviasiVmp < 0 ? '−' : ''}${formatIndoNumber(Math.abs(s.deviasiVmp), 2)}%`);
+  if (t58) {
+    if (state.hideFieldComparisonTable) {
+      t58.parentNode?.removeChild(t58);
+    } else {
+      const rows = t58.getElementsByTagNameNS(W_NS, 'tr');
+      if (rows.length >= 5) {
+        analysis.strings.forEach((s, idx) => {
+          if (rows[1 + idx]) {
+            const cells = rows[1 + idx].getElementsByTagNameNS(W_NS, 'tc');
+            if (cells.length >= 5) {
+              setTcText(cells[0], s.name);
+              setTcText(cells[1], `${s.voc} V`);
+              setTcText(cells[2], `${s.irr} W/m²`);
+              setTcText(cells[3], `${s.vmp} V`);
+              setTcText(cells[4], `${s.deviasiVmp < 0 ? '−' : ''}${formatIndoNumber(Math.abs(s.deviasiVmp), 2)}%`);
+            }
           }
+        });
+        const stcCells = rows[4].getElementsByTagNameNS(W_NS, 'tc');
+        if (stcCells.length >= 4) {
+          setTcText(stcCells[0], 'STC');
+          setTcText(stcCells[1], `${formatIndoNumber(analysis.vocSTC, 0)} V`);
+          setTcText(stcCells[2], '1.000 W/m²');
+          setTcText(stcCells[3], `${formatIndoNumber(analysis.vmpSTC, 0)} V`);
         }
-      });
-      const stcCells = rows[4].getElementsByTagNameNS(W_NS, 'tc');
-      if (stcCells.length >= 4) {
-        setTcText(stcCells[0], 'STC');
-        setTcText(stcCells[1], `${formatIndoNumber(analysis.vocSTC, 0)} V`);
-        setTcText(stcCells[2], '1.000 W/m²');
-        setTcText(stcCells[3], `${formatIndoNumber(analysis.vmpSTC, 0)} V`);
       }
     }
   }
 
   // Table 59: Vmp / Voc Ratio
-  if (tables.length > 59) {
-    const t59 = tables[59];
+  if (t59) {
     const rows = t59.getElementsByTagNameNS(W_NS, 'tr');
     if (rows.length >= 4) {
       analysis.strings.forEach((s, idx) => {

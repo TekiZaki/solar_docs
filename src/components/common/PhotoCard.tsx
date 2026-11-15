@@ -151,6 +151,7 @@ interface PhotoCardHeaderProps {
   onMoveNext?: () => void;
   onAddSlot: () => void;
   onDeleteSlot: () => void;
+  onToggleExcludeDocx: () => void;
 }
 
 const PhotoCardHeader: React.FC<PhotoCardHeaderProps> = ({
@@ -161,6 +162,7 @@ const PhotoCardHeader: React.FC<PhotoCardHeaderProps> = ({
   onMoveNext,
   onAddSlot,
   onDeleteSlot,
+  onToggleExcludeDocx,
 }) => {
   const displayTarget = slot.isCustom
     ? 'Tambahan'
@@ -226,6 +228,22 @@ const PhotoCardHeader: React.FC<PhotoCardHeaderProps> = ({
             Hapus
           </button>
         )}
+        <button
+          type="button"
+          onClick={onToggleExcludeDocx}
+          className={`text-[10px] font-medium px-1.5 py-0.5 rounded border transition shrink-0 ${
+            slot.excludeFromDocx
+              ? 'bg-slate-200 text-slate-700 border-slate-400 hover:bg-slate-300'
+              : 'bg-white/90 text-slate-700 border-slate-300 hover:bg-white'
+          }`}
+          title={
+            slot.excludeFromDocx
+              ? 'Dikecualikan dari DOCX. Klik untuk sertakan kembali.'
+              : 'Masuk ke DOCX. Klik untuk kecualikan dari generated DOCX.'
+          }
+        >
+          {slot.excludeFromDocx ? 'Non-DOCX' : 'DOCX'}
+        </button>
         {slot.isUploaded ? (
           <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 flex items-center gap-1 shrink-0">
             <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
@@ -351,7 +369,11 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
   const objectPosY = ((1 - currentPanY) / 2) * 100;
 
   return (
-    <div className="bg-gray-600 border border-slate-200 rounded-lg p-3 sm:p-3.5 shadow-sm hover:border-slate-300 transition flex flex-col justify-between gap-3 text-left w-full min-w-0 overflow-hidden">
+    <div
+      className={`border border-slate-200 rounded-lg p-3 sm:p-3.5 shadow-sm hover:border-slate-300 transition flex flex-col justify-between gap-3 text-left w-full min-w-0 overflow-hidden ${
+        slot.excludeFromDocx ? 'bg-gray-500 opacity-60 grayscale' : 'bg-gray-600'
+      }`}
+    >
       <PhotoCardHeader
         slot={slot}
         indexNumber={indexNumber}
@@ -364,6 +386,9 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
             deletePhotoSlot(slot.id);
           }
         }}
+        onToggleExcludeDocx={() =>
+          updatePhotoSlot(slot.id, { excludeFromDocx: !slot.excludeFromDocx })
+        }
       />
 
       {/* Image Preview & Upload Controls (Locked 3:4 Aspect Ratio, bg-white) */}

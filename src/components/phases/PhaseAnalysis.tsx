@@ -24,12 +24,11 @@ export const PhaseAnalysis: React.FC = () => {
     updateDatasheet,
     updateSTCRow,
     setHidePVAnalisis,
+    setHideFieldComparisonTable,
   } = useReport();
 
   const dcItems = state.measurements.filter((m) => m.id.startsWith('dc_'));
-  const displayedDcItems = state.hidePVAnalisis
-    ? dcItems.filter((m) => !m.id.startsWith('dc_voc_'))
-    : dcItems;
+  const displayedDcItems = dcItems;
   const acItems = state.measurements.filter((m) => m.id.startsWith('ac_') || m.id.startsWith('ground_'));
 
   const analysis = useMemo(() => computePVAnalysis(state), [state]);
@@ -103,8 +102,8 @@ export const PhaseAnalysis: React.FC = () => {
                 }`}
               >
                 {state.hidePVAnalisis
-                  ? 'Tampilkan Data PV Analisis'
-                  : 'Sembunyikan Data PV Analisis ?'}
+                  ? 'Sertakan PV Analisis di DOCX'
+                  : 'Kecualikan PV Analisis dari DOCX'}
               </button>
             </div>
             <table className="w-full text-xs text-left">
@@ -118,18 +117,36 @@ export const PhaseAnalysis: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {displayedDcItems.map((m) => (
-                  <tr key={m.id} className="hover:bg-slate-50/50">
+                {displayedDcItems.map((m) => {
+                  const isExcluded =
+                    Boolean(m.excludeFromDocx) ||
+                    (Boolean(state.hidePVAnalisis) && m.id.startsWith('dc_voc_'));
+                  return (
+                  <tr
+                    key={m.id}
+                    className={
+                      isExcluded
+                        ? 'bg-slate-100 text-slate-400 opacity-60'
+                        : 'hover:bg-slate-50/50'
+                    }
+                  >
                     <td className="py-2 px-3 font-mono text-slate-500">{m.no}</td>
-                    <td className="py-2 px-3 text-slate-800">{m.parameter}</td>
-                    <td className="py-2 px-3 font-mono font-medium text-slate-700 bg-slate-50/50">
+                    <td className={`py-2 px-3 ${isExcluded ? 'text-slate-400' : 'text-slate-800'}`}>
+                      {m.parameter}
+                      {isExcluded && (
+                        <span className="ml-2 text-[10px] font-medium text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">
+                          Non-DOCX
+                        </span>
+                      )}
+                    </td>
+                    <td className={`py-2 px-3 font-mono font-medium ${isExcluded ? 'text-slate-400 bg-slate-100' : 'text-slate-700 bg-slate-50/50'}`}>
                       {m.hasilBefore || (
                         <span className="text-slate-400 italic">
                           ({EXAMPLE_MEASUREMENTS[m.id]?.before || '-'})
                         </span>
                       )}
                     </td>
-                    <td className="py-2 px-3 font-mono font-semibold text-emerald-700 bg-emerald-50/30">
+                    <td className={`py-2 px-3 font-mono font-semibold ${isExcluded ? 'text-slate-400 bg-slate-100' : 'text-emerald-700 bg-emerald-50/30'}`}>
                       {m.hasilAfter || (
                         <span className="text-slate-400 font-normal italic">
                           ({EXAMPLE_MEASUREMENTS[m.id]?.after || '-'})
@@ -146,7 +163,8 @@ export const PhaseAnalysis: React.FC = () => {
                       />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -473,17 +491,43 @@ export const PhaseAnalysis: React.FC = () => {
 
       {/* III.II.IV. Analisa Data Lapangan (Voc dan Vmp) */}
       <div className="bg-white border border-black rounded-lg p-4 sm:p-5 space-y-5 shadow-sm">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">
-            III.II.IV. ANALISA DATA LAPANGAN (Voc DAN Vmp)
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Komparasi data pengukuran aktual pasca pembersihan terhadap nilai referensi STC.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">
+              III.II.IV. ANALISA DATA LAPANGAN (Voc DAN Vmp)
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Komparasi data pengukuran aktual pasca pembersihan terhadap nilai referensi STC.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHideFieldComparisonTable(!state.hideFieldComparisonTable)}
+            className={`text-[11px] font-medium px-2.5 py-1 rounded border transition-colors self-start sm:self-auto ${
+              state.hideFieldComparisonTable
+                ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            }`}
+          >
+            {state.hideFieldComparisonTable
+              ? 'Sertakan Tabel Komparasi di DOCX'
+              : 'Hilangkan Tabel Komparasi dari DOCX'}
+          </button>
         </div>
 
         {/* Table 58: String Field Measurements vs STC */}
-        <div className="border border-black rounded-lg overflow-hidden">
+        <div
+          className={`border border-black rounded-lg overflow-hidden transition ${
+            state.hideFieldComparisonTable
+              ? 'opacity-50 grayscale bg-slate-100'
+              : ''
+          }`}
+        >
+          {state.hideFieldComparisonTable && (
+            <div className="bg-slate-200 text-slate-600 text-[11px] font-medium px-3 py-1 border-b border-slate-300">
+              Dikecualikan dari generated DOCX (tetap tampil di web)
+            </div>
+          )}
           <table className="w-full text-xs text-left">
             <thead className="bg-blue-100 text-slate-800 font-semibold border-b border-black">
               <tr>

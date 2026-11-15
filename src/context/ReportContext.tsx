@@ -321,6 +321,10 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     applyUpdate((prev) => ({ ...prev, hidePVAnalisis: hide }));
   };
 
+  const setHideFieldComparisonTable = (hide: boolean) => {
+    applyUpdate((prev) => ({ ...prev, hideFieldComparisonTable: hide }));
+  };
+
   const setCustomFileName = (fileName: string) => {
     applyUpdate((prev) => ({ ...prev, customFileName: fileName }));
   };
@@ -425,6 +429,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateRecommendation,
         deleteRecommendation,
         setHidePVAnalisis,
+        setHideFieldComparisonTable,
         setCustomFileName,
         addPhotoSlot,
         movePhotoSlot,

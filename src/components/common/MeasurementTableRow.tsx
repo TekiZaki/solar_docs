@@ -42,7 +42,13 @@ export const MeasurementTableRow: React.FC<MeasurementTableRowProps> = ({
   };
 
   return (
-    <tr className="hover:bg-slate-50/60 transition group">
+    <tr
+      className={`transition group ${
+        item.excludeFromDocx
+          ? 'bg-slate-100 opacity-55 text-slate-400'
+          : 'hover:bg-slate-50/60'
+      }`}
+    >
       <td className="py-1.5 px-2 font-mono text-slate-700 align-top pt-2 w-16">
         <input
           type="text"
@@ -97,6 +103,22 @@ export const MeasurementTableRow: React.FC<MeasurementTableRowProps> = ({
             className="px-1.5 py-0.5 text-[11px] font-mono font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded border border-slate-200 transition"
           >
             +↓
+          </button>
+          <button
+            type="button"
+            onClick={() => onUpdate(item.id, { excludeFromDocx: !item.excludeFromDocx })}
+            title={
+              item.excludeFromDocx
+                ? 'Dikecualikan dari DOCX. Klik untuk sertakan kembali.'
+                : 'Kecualikan baris ini dari generated DOCX'
+            }
+            className={`px-1.5 py-0.5 text-[10px] font-medium rounded border transition ${
+              item.excludeFromDocx
+                ? 'bg-slate-300 text-slate-800 border-slate-400 hover:bg-slate-400'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            {item.excludeFromDocx ? 'Non-DOCX' : 'DOCX'}
           </button>
           <button
             type="button"

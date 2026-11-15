@@ -44,6 +44,7 @@ export interface PhotoSlot {
   isFitted?: boolean; // true if double-tapped to fit entire image with white background
   isUploaded: boolean;
   isCustom?: boolean;
+  excludeFromDocx?: boolean;
   updatedAt?: number;
 }
 
@@ -62,6 +63,7 @@ export interface ElectricalMeasurement {
   hasilBefore: string;
   hasilAfter: string;
   standard?: string;
+  excludeFromDocx?: boolean;
 }
 
 export interface STCDataRow {
@@ -140,5 +142,6 @@ export interface MaintenanceReportState {
   technicalRecommendations?: TechnicalRecommendationItem[];
   analysisNarrative?: AnalysisNarrative;
   hidePVAnalisis?: boolean;
+  hideFieldComparisonTable?: boolean;
   customFileName?: string;
 }
