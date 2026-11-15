@@ -27,6 +27,7 @@ export function useReportLock(
 ) {
   const [deviceId] = useState<string>(() => getDeviceId());
   const [deviceName, setDeviceNameState] = useState<string>(() => getDeviceName(deviceId));
+  const [lockActive, setLockActive] = useState(false);
   const [isLockedByOther, setIsLockedByOther] = useState(false);
   const [lockOwner, setLockOwner] = useState<ReportLockInfo | null>(null);
   const wasLockedRef = useRef(false);
@@ -37,7 +38,12 @@ export function useReportLock(
   }, []);
 
   useEffect(() => {
-    if (!currentReportId) return;
+    if (!currentReportId || !lockActive) {
+      setIsLockedByOther(false);
+      setLockOwner(null);
+      wasLockedRef.current = false;
+      return;
+    }
     let active = true;
 
     const syncLock = async () => {
@@ -71,12 +77,13 @@ export function useReportLock(
       window.removeEventListener('beforeunload', handlePageHide);
       releaseReportLock(currentReportId, deviceId);
     };
-  }, [currentReportId, deviceId, deviceName, onRemoteUpdate]);
+  }, [currentReportId, lockActive, deviceId, deviceName, onRemoteUpdate]);
 
   return {
     deviceId,
     deviceName,
     setDeviceName,
+    setLockActive,
     isLockedByOther,
     lockOwner,
   };

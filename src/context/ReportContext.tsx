@@ -48,6 +48,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deviceId,
     deviceName,
     setDeviceName,
+    setLockActive,
     isLockedByOther,
     lockOwner,
   } = useReportLock(currentReportId, refreshCurrentReport);
@@ -448,6 +449,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deviceId,
         deviceName,
         setDeviceName,
+        setLockActive,
         isLockedByOther,
         lockOwner,
       }}

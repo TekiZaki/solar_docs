@@ -82,6 +82,7 @@ export const AppContent: React.FC = () => {
     hasUnsavedChanges,
     deviceName,
     setDeviceName,
+    setLockActive,
     isLockedByOther,
     lockOwner,
   } = useReport();
@@ -93,6 +94,11 @@ export const AppContent: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isMissingModalOpen, setIsMissingModalOpen] = useState(false);
   const isPoppingRef = React.useRef(false);
+
+  // Only hold a report lock when inside an active report view (release on home/settings)
+  React.useEffect(() => {
+    setLockActive(currentView !== 'home' && currentView !== 'settings');
+  }, [currentView, setLockActive]);
 
   // Sync URL pathname with current view and phase
   React.useEffect(() => {

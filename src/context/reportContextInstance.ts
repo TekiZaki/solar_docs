@@ -99,6 +99,7 @@ export interface ReportContextType {
   deviceId: string;
   deviceName: string;
   setDeviceName: (name: string) => void;
+  setLockActive: (active: boolean) => void;
   isLockedByOther: boolean;
   lockOwner: ReportLockInfo | null;
 }
