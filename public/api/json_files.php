@@ -121,6 +121,149 @@ function resolveTargetJsonFile(string $dataRoot, string $rawPath): ?array {
     return ['rel' => $rel, 'abs' => $abs];
 }
 
+function isFilledScalarValue($val): bool {
+    if ($val === null) return false;
+    if (is_bool($val)) return true;
+    if (is_int($val) || is_float($val)) return true;
+    if (is_string($val)) return trim($val) !== '';
+    return false;
+}
+
+function countGenericJsonLeaves($node, int &$filled, int &$total): void {
+    if (is_array($node)) {
+        if (count($node) === 0) return;
+        foreach ($node as $child) {
+            countGenericJsonLeaves($child, $filled, $total);
+        }
+        return;
+    }
+    $total++;
+    if (isFilledScalarValue($node)) {
+        $filled++;
+    }
+}
+
+function computeJsonProgress($decoded): array {
+    $dataFilled = 0;
+    $dataTotal = 0;
+    $imagesFilled = 0;
+    $imagesTotal = 0;
+    $isReport = is_array($decoded) && isset($decoded['photoSlots']) && is_array($decoded['photoSlots']);
+
+    if ($isReport) {
+        foreach ($decoded['photoSlots'] as $slot) {
+            if (!is_array($slot)) continue;
+            $imagesTotal++;
+            $hasImg = !empty($slot['isUploaded'])
+                || (!empty($slot['imagePath']) && is_string($slot['imagePath']) && trim($slot['imagePath']) !== '')
+                || (!empty($slot['imageDataUrl']) && is_string($slot['imageDataUrl']) && trim($slot['imageDataUrl']) !== '');
+            if ($hasImg) {
+                $imagesFilled++;
+            }
+        }
+
+        if (isset($decoded['location']) && is_array($decoded['location'])) {
+            foreach ($decoded['location'] as $val) {
+                $dataTotal++;
+                if (isFilledScalarValue($val)) $dataFilled++;
+            }
+        }
+
+        if (isset($decoded['realizationDates']) && is_array($decoded['realizationDates'])) {
+            foreach ($decoded['realizationDates'] as $row) {
+                if (!is_array($row)) continue;
+                foreach (['tanggalPelaksanaan', 'kondisiCuaca'] as $field) {
+                    $dataTotal++;
+                    if (isset($row[$field]) && isFilledScalarValue($row[$field])) $dataFilled++;
+                }
+            }
+        }
+
+        if (isset($decoded['checklist']) && is_array($decoded['checklist'])) {
+            $hasDottedNo = false;
+            foreach ($decoded['checklist'] as $row) {
+                if (is_array($row) && isset($row['no']) && strpos((string)$row['no'], '.') !== false) {
+                    $hasDottedNo = true;
+                    break;
+                }
+            }
+            foreach ($decoded['checklist'] as $row) {
+                if (!is_array($row)) continue;
+                if ($hasDottedNo && strpos((string)($row['no'] ?? ''), '.') === false) {
+                    continue;
+                }
+                $dataTotal++;
+                if (isset($row['deskripsi']) && isFilledScalarValue($row['deskripsi'])) {
+                    $dataFilled++;
+                }
+            }
+        }
+
+        if (isset($decoded['measurements']) && is_array($decoded['measurements'])) {
+            foreach ($decoded['measurements'] as $row) {
+                if (!is_array($row)) continue;
+                foreach (['hasilBefore', 'hasilAfter'] as $field) {
+                    $dataTotal++;
+                    if (isset($row[$field]) && isFilledScalarValue($row[$field])) $dataFilled++;
+                }
+            }
+        }
+
+        if (isset($decoded['datasheet']) && is_array($decoded['datasheet'])) {
+            foreach ($decoded['datasheet'] as $val) {
+                $dataTotal++;
+                if (isFilledScalarValue($val)) $dataFilled++;
+            }
+        }
+
+        if (isset($decoded['conclusions']) && is_array($decoded['conclusions'])) {
+            foreach ($decoded['conclusions'] as $val) {
+                $dataTotal++;
+                if (isFilledScalarValue($val)) $dataFilled++;
+            }
+        }
+
+        if (isset($decoded['damages']) && is_array($decoded['damages'])) {
+            foreach ($decoded['damages'] as $row) {
+                if (!is_array($row)) continue;
+                foreach (['lokasi', 'kerusakanDiLokasi', 'perbaikanYangDilakukan', 'updateKerusakan'] as $field) {
+                    $dataTotal++;
+                    if (isset($row[$field]) && isFilledScalarValue($row[$field])) $dataFilled++;
+                }
+            }
+        }
+
+        if (isset($decoded['recommendations']) && is_array($decoded['recommendations'])) {
+            foreach ($decoded['recommendations'] as $row) {
+                if (!is_array($row)) continue;
+                foreach (['lokasi', 'kerusakanDiLokasi', 'updateKerusakan', 'rekomendasi'] as $field) {
+                    $dataTotal++;
+                    if (isset($row[$field]) && isFilledScalarValue($row[$field])) $dataFilled++;
+                }
+            }
+        }
+    } elseif ($decoded !== null) {
+        countGenericJsonLeaves($decoded, $dataFilled, $dataTotal);
+    }
+
+    $dataPercent = $dataTotal > 0 ? (int)round(($dataFilled / $dataTotal) * 100) : 0;
+    $imagesPercent = $imagesTotal > 0 ? (int)round(($imagesFilled / $imagesTotal) * 100) : 0;
+    $combinedTotal = $dataTotal + $imagesTotal;
+    $combinedFilled = $dataFilled + $imagesFilled;
+    $overallPercent = $combinedTotal > 0 ? (int)round(($combinedFilled / $combinedTotal) * 100) : 0;
+
+    return [
+        'isReport' => $isReport,
+        'dataFilled' => $dataFilled,
+        'dataTotal' => $dataTotal,
+        'dataPercent' => $dataPercent,
+        'imagesFilled' => $imagesFilled,
+        'imagesTotal' => $imagesTotal,
+        'imagesPercent' => $imagesPercent,
+        'overallPercent' => $overallPercent,
+    ];
+}
+
 function listAllJsonFiles(string $dataRoot): array {
     $items = [];
     $iterator = new RecursiveIteratorIterator(
@@ -141,10 +284,12 @@ function listAllJsonFiles(string $dataRoot): array {
 
         $lokasi = '';
         $name = basename($rel, '.json');
+        $decoded = null;
         $raw = readFileLocked($abs);
         if ($raw !== false) {
-            $decoded = json_decode($raw, true);
-            if (is_array($decoded)) {
+            $parsed = json_decode($raw, true);
+            if (is_array($parsed)) {
+                $decoded = $parsed;
                 if (!empty($decoded['location']['lokasi']) && is_string($decoded['location']['lokasi'])) {
                     $lokasi = $decoded['location']['lokasi'];
                 } elseif (!empty($decoded['deviceName']) && is_string($decoded['deviceName'])) {
@@ -164,6 +309,7 @@ function listAllJsonFiles(string $dataRoot): array {
             'sizeBytes' => $size,
             'updatedAt' => date('Y-m-d H:i:s', $mtime),
             'updatedTs' => $mtime,
+            'progress' => computeJsonProgress($decoded),
         ];
     }
 

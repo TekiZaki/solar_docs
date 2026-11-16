@@ -24,6 +24,13 @@ interface JsonExplorerPageProps {
 }
 
 type EditorTab = 'ui' | 'raw';
+type SortMode =
+  | 'updated_desc'
+  | 'progress_desc'
+  | 'progress_asc'
+  | 'images_desc'
+  | 'data_desc'
+  | 'name_asc';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -83,6 +90,7 @@ export const JsonExplorerPage: React.FC<JsonExplorerPageProps> = ({ onBack }) =>
   const [listLoading, setListLoading] = useState(true);
   const [fileQuery, setFileQuery] = useState('');
   const [folderFilter, setFolderFilter] = useState<string>('all');
+  const [sortMode, setSortMode] = useState<SortMode>('progress_desc');
 
   const [selectedFile, setSelectedFile] = useState<string>('');
   const [fileMeta, setFileMeta] = useState<{ sizeBytes: number; updatedAt: string } | null>(null);
@@ -302,7 +310,7 @@ export const JsonExplorerPage: React.FC<JsonExplorerPageProps> = ({ onBack }) =>
 
   const filteredFiles = useMemo(() => {
     const q = fileQuery.trim().toLowerCase();
-    return files.filter((f) => {
+    const list = files.filter((f) => {
       if (folderFilter !== 'all' && f.folder !== folderFilter) return false;
       if (!q) return true;
       return (
@@ -311,7 +319,47 @@ export const JsonExplorerPage: React.FC<JsonExplorerPageProps> = ({ onBack }) =>
         f.lokasi.toLowerCase().includes(q)
       );
     });
-  }, [files, folderFilter, fileQuery]);
+
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      const pa = a.progress;
+      const pb = b.progress;
+      if (sortMode === 'progress_desc') {
+        if (pb.overallPercent !== pa.overallPercent) return pb.overallPercent - pa.overallPercent;
+        const sumA = pa.dataFilled + pa.imagesFilled;
+        const sumB = pb.dataFilled + pb.imagesFilled;
+        if (sumB !== sumA) return sumB - sumA;
+        return b.updatedTs - a.updatedTs;
+      }
+      if (sortMode === 'progress_asc') {
+        if (pa.overallPercent !== pb.overallPercent) return pa.overallPercent - pb.overallPercent;
+        const sumA = pa.dataFilled + pa.imagesFilled;
+        const sumB = pb.dataFilled + pb.imagesFilled;
+        if (sumA !== sumB) return sumA - sumB;
+        return b.updatedTs - a.updatedTs;
+      }
+      if (sortMode === 'images_desc') {
+        if (pb.imagesFilled !== pa.imagesFilled) return pb.imagesFilled - pa.imagesFilled;
+        if (pb.imagesPercent !== pa.imagesPercent) return pb.imagesPercent - pa.imagesPercent;
+        return pb.overallPercent - pa.overallPercent;
+      }
+      if (sortMode === 'data_desc') {
+        if (pb.dataFilled !== pa.dataFilled) return pb.dataFilled - pa.dataFilled;
+        if (pb.dataPercent !== pa.dataPercent) return pb.dataPercent - pa.dataPercent;
+        return pb.overallPercent - pa.overallPercent;
+      }
+      if (sortMode === 'name_asc') {
+        return a.name.localeCompare(b.name);
+      }
+      return b.updatedTs - a.updatedTs;
+    });
+    return sorted;
+  }, [files, folderFilter, fileQuery, sortMode]);
+
+  const selectedEntry = useMemo(
+    () => files.find((f) => f.file === selectedFile) ?? null,
+    [files, selectedFile]
+  );
 
   const lineCount = rawText ? rawText.split('\n').length : 0;
   const apiUrlBase = `${window.location.origin}${import.meta.env.BASE_URL}api/json_files.php`;
@@ -474,6 +522,28 @@ curl -X PATCH "${apiUrlBase}" -H "Content-Type: application/json" -d '{"file":"$
                 className="w-full text-xs px-2.5 py-1.5 rounded-md border border-slate-300 bg-[#FAF9F6] focus:bg-white focus:outline-none focus:border-teal-700"
               />
 
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="json-sort-select"
+                  className="text-[11px] font-medium text-slate-600 shrink-0"
+                >
+                  Urutkan:
+                </label>
+                <select
+                  id="json-sort-select"
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value as SortMode)}
+                  className="flex-1 text-xs px-2 py-1 rounded-md border border-slate-300 bg-[#FAF9F6] focus:bg-white focus:outline-none focus:border-teal-700 text-[#1E293B]"
+                >
+                  <option value="progress_desc">Progress Tertinggi</option>
+                  <option value="progress_asc">Progress Terendah</option>
+                  <option value="images_desc">Gambar Terbanyak</option>
+                  <option value="data_desc">Data Terbanyak</option>
+                  <option value="updated_desc">Terbaru Diubah</option>
+                  <option value="name_asc">Nama (A-Z)</option>
+                </select>
+              </div>
+
               <div className="flex flex-wrap gap-1">
                 {folders.map((folder) => (
                   <button
@@ -500,6 +570,7 @@ curl -X PATCH "${apiUrlBase}" -H "Content-Type: application/json" -d '{"file":"$
               ) : (
                 filteredFiles.map((item) => {
                   const isActive = item.file === selectedFile;
+                  const p = item.progress;
                   return (
                     <button
                       key={item.file}
@@ -515,15 +586,35 @@ curl -X PATCH "${apiUrlBase}" -H "Content-Type: application/json" -d '{"file":"$
                         <span className="text-xs font-medium text-[#1E293B] truncate">
                           {item.name}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-500 tabular-nums shrink-0">
-                          {formatBytes(item.sizeBytes)}
+                        <span className="text-[11px] font-mono font-semibold text-teal-800 tabular-nums shrink-0">
+                          {p ? `${p.overallPercent}%` : formatBytes(item.sizeBytes)}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 truncate mt-0.5">
                         {item.lokasi || item.file}
                       </div>
+                      {p && (
+                        <div className="mt-1.5 space-y-1">
+                          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-teal-700 rounded-full transition-all"
+                              style={{ width: `${Math.max(0, Math.min(100, p.overallPercent))}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] font-mono tabular-nums text-slate-600">
+                            <span>
+                              Data {p.dataFilled}/{p.dataTotal} ({p.dataPercent}%)
+                            </span>
+                            {p.isReport && (
+                              <span>
+                                Gambar {p.imagesFilled}/{p.imagesTotal} ({p.imagesPercent}%)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400 font-mono tabular-nums">
-                        <span>{item.folder}</span>
+                        <span>{item.folder} • {formatBytes(item.sizeBytes)}</span>
                         <span>{item.updatedAt}</span>
                       </div>
                     </button>
@@ -553,6 +644,21 @@ curl -X PATCH "${apiUrlBase}" -H "Content-Type: application/json" -d '{"file":"$
                           <span>{formatBytes(fileMeta.sizeBytes)}</span>
                           <span>{lineCount} baris</span>
                           <span>Diubah: {fileMeta.updatedAt}</span>
+                        </>
+                      )}
+                      {selectedEntry?.progress && (
+                        <>
+                          <span className="text-teal-800 font-medium">
+                            Data {selectedEntry.progress.dataFilled}/{selectedEntry.progress.dataTotal} ({selectedEntry.progress.dataPercent}%)
+                          </span>
+                          {selectedEntry.progress.isReport && (
+                            <span className="text-teal-800 font-medium">
+                              Gambar {selectedEntry.progress.imagesFilled}/{selectedEntry.progress.imagesTotal} ({selectedEntry.progress.imagesPercent}%)
+                            </span>
+                          )}
+                          <span className="text-[#1E293B] font-semibold">
+                            Total {selectedEntry.progress.overallPercent}%
+                          </span>
                         </>
                       )}
                       {copiedHint && <span className="text-teal-700 font-sans">{copiedHint}</span>}

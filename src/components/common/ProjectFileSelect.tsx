@@ -14,6 +14,7 @@ interface ProjectFileSelectProps {
   selectedId: string;
   activeReportId?: string;
   onSelect: (id: string) => void;
+  onOpen?: () => void;
   disabled?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const ProjectFileSelect: React.FC<ProjectFileSelectProps> = ({
   selectedId,
   activeReportId,
   onSelect,
+  onOpen,
   disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -69,12 +71,23 @@ export const ProjectFileSelect: React.FC<ProjectFileSelectProps> = ({
     return matchId || matchLokasi || matchName;
   });
 
+  const selectedActiveCount = selectedReport?.activeDeviceCount ?? 0;
+  const selectedActiveNames = (selectedReport?.activeDevices || [])
+    .map((d) => d.deviceName)
+    .join(', ');
+
   return (
     <div ref={containerRef} className="relative w-full">
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => {
+          setIsOpen((prev) => {
+            const next = !prev;
+            if (next) onOpen?.();
+            return next;
+          });
+        }}
         className="w-full h-10 px-3 rounded border border-slate-300 bg-white hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 flex items-center justify-between shadow-sm transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <div className="flex flex-col justify-center min-w-0 pr-2">
@@ -85,20 +98,31 @@ export const ProjectFileSelect: React.FC<ProjectFileSelectProps> = ({
             {selectedReport
               ? `${selectedReport.lokasi ? `${selectedReport.lokasi} • ` : ''}${selectedReport.photoCount} foto • ${selectedReport.fileSizeKb} KB${
                   selectedReport.id === activeReportId ? ' • Aktif' : ''
-                }`
+                }${selectedActiveNames ? ` • ${selectedActiveNames}` : ''}`
               : selectedId}
           </span>
         </div>
-        <svg
-          className={`w-4 h-4 text-slate-500 shrink-0 ml-1 transition-transform ${
-            isOpen ? 'rotate-180' : ''
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-        </svg>
+        <div className="flex items-center gap-1.5 shrink-0 ml-1">
+          {selectedActiveCount > 0 && (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] font-mono tabular-nums font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded leading-none"
+              title={`Perangkat aktif (${selectedActiveCount}): ${selectedActiveNames}`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>{selectedActiveCount}</span>
+            </span>
+          )}
+          <svg
+            className={`w-4 h-4 text-slate-500 transition-transform ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </button>
 
       {isOpen && (
@@ -144,6 +168,9 @@ export const ProjectFileSelect: React.FC<ProjectFileSelectProps> = ({
               filteredReports.map((rep) => {
                 const isSelected = rep.id === selectedId;
                 const isActive = rep.id === activeReportId;
+                const activeDevices = rep.activeDevices || [];
+                const activeCount = rep.activeDeviceCount ?? activeDevices.length;
+                const deviceNamesText = activeDevices.map((d) => d.deviceName).join(', ');
                 return (
                   <button
                     key={rep.id}
@@ -161,6 +188,15 @@ export const ProjectFileSelect: React.FC<ProjectFileSelectProps> = ({
                         {rep.name}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
+                        {activeCount > 0 && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-mono tabular-nums font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded leading-none"
+                            title={`Perangkat aktif (${activeCount}): ${deviceNamesText}`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>{activeCount}</span>
+                          </span>
+                        )}
                         {isActive && (
                           <span className="text-[10px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded leading-none">
                             Sedang Aktif
@@ -182,6 +218,11 @@ export const ProjectFileSelect: React.FC<ProjectFileSelectProps> = ({
                       <span>•</span>
                       <span>{rep.fileSizeKb} KB</span>
                     </div>
+                    {activeDevices.length > 0 && (
+                      <div className="text-[10px] text-emerald-800 truncate">
+                        Aktif ({activeCount}): {deviceNamesText}
+                      </div>
+                    )}
                   </button>
                 );
               })

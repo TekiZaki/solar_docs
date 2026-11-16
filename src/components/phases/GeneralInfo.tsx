@@ -7,7 +7,7 @@
 // - Notes: Eliminates localStorage quota limits by syncing directly with disk-backed JSON reports
 // ---
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useReport } from '../../context/useReport';
 import { PhotoCard } from '../common/PhotoCard';
 import { ProjectFileSelect } from '../common/ProjectFileSelect';
@@ -35,6 +35,13 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
   const [newReportName, setNewReportName] = useState('');
   const [newReportLokasi, setNewReportLokasi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      refreshReportList();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [currentReportId, refreshReportList]);
 
   // loading another berkas discards local edits, so ask first when dirty
   const confirmIfDirty = () =>
@@ -127,6 +134,9 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
               reports={reportList}
               selectedId={currentReportId}
               activeReportId={currentReportId}
+              onOpen={() => {
+                refreshReportList();
+              }}
               onSelect={(id) => {
                 if (confirmIfDirty()) loadReport(id);
               }}

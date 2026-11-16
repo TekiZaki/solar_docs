@@ -6,6 +6,17 @@
 // - Key Responsibilities: List all JSON files in public/data/, fetch file content, save raw JSON, patch dot-path, create and delete files
 // ---
 
+export interface JsonFileProgress {
+  isReport: boolean;
+  dataFilled: number;
+  dataTotal: number;
+  dataPercent: number;
+  imagesFilled: number;
+  imagesTotal: number;
+  imagesPercent: number;
+  overallPercent: number;
+}
+
 export interface JsonFileEntry {
   file: string;
   folder: string;
@@ -14,6 +25,7 @@ export interface JsonFileEntry {
   sizeBytes: number;
   updatedAt: string;
   updatedTs: number;
+  progress: JsonFileProgress;
 }
 
 export interface JsonFileDetail {

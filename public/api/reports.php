@@ -37,19 +37,72 @@ if (!is_dir($locksDir)) {
 
 const LOCK_TTL_SECONDS = 30;
 
-function readActiveLock(string $locksDir, string $reportId): ?array {
+function readNormalizedLockState(string $locksDir, string $reportId): ?array {
     if ($reportId === '') return null;
     $lockFile = $locksDir . '/' . $reportId . '.json';
     if (!file_exists($lockFile)) return null;
     $raw = readFileLocked($lockFile);
     if ($raw === false) return null;
     $lock = json_decode($raw, true);
-    if (!is_array($lock) || empty($lock['deviceId'])) return null;
-    if ((int)($lock['expiresAt'] ?? 0) <= time()) {
+    if (!is_array($lock)) return null;
+
+    $now = time();
+    $activeDevices = [];
+    if (!empty($lock['activeDevices']) && is_array($lock['activeDevices'])) {
+        foreach ($lock['activeDevices'] as $entry) {
+            if (!is_array($entry) || empty($entry['deviceId'])) continue;
+            if ((int)($entry['expiresAt'] ?? 0) <= $now) continue;
+            $dId = (string)$entry['deviceId'];
+            $activeDevices[$dId] = [
+                'deviceId' => $dId,
+                'deviceName' => (string)($entry['deviceName'] ?? 'Perangkat'),
+                'ip' => (string)($entry['ip'] ?? ''),
+                'role' => (string)($entry['role'] ?? 'viewer'),
+                'lastSeenAt' => (int)($entry['lastSeenAt'] ?? $now),
+                'expiresAt' => (int)($entry['expiresAt'] ?? 0),
+            ];
+        }
+    }
+
+    $hasMainLock = !empty($lock['deviceId']) && (int)($lock['expiresAt'] ?? 0) > $now;
+    $mainDeviceId = $hasMainLock ? (string)$lock['deviceId'] : '';
+
+    if ($hasMainLock && !isset($activeDevices[$mainDeviceId])) {
+        $activeDevices[$mainDeviceId] = [
+            'deviceId' => $mainDeviceId,
+            'deviceName' => (string)($lock['deviceName'] ?? 'Perangkat'),
+            'ip' => (string)($lock['ip'] ?? ''),
+            'role' => 'editor',
+            'lastSeenAt' => (int)($lock['acquiredAt'] ?? $now),
+            'expiresAt' => (int)($lock['expiresAt'] ?? 0),
+        ];
+    }
+
+    if (!$hasMainLock && empty($activeDevices)) {
         @unlink($lockFile);
         return null;
     }
-    return $lock;
+
+    return [
+        'deviceId' => $mainDeviceId,
+        'deviceName' => $hasMainLock ? (string)($lock['deviceName'] ?? 'Perangkat') : '',
+        'ip' => $hasMainLock ? (string)($lock['ip'] ?? '') : '',
+        'acquiredAt' => $hasMainLock ? (int)($lock['acquiredAt'] ?? 0) : 0,
+        'expiresAt' => $hasMainLock ? (int)($lock['expiresAt'] ?? 0) : 0,
+        'activeDevices' => $activeDevices,
+    ];
+}
+
+function readActiveLock(string $locksDir, string $reportId): ?array {
+    $state = readNormalizedLockState($locksDir, $reportId);
+    if ($state === null || $state['deviceId'] === '') return null;
+    return [
+        'deviceId' => $state['deviceId'],
+        'deviceName' => $state['deviceName'],
+        'ip' => $state['ip'],
+        'acquiredAt' => $state['acquiredAt'],
+        'expiresAt' => $state['expiresAt'],
+    ];
 }
 
 function isLockedByOtherDevice(string $locksDir, string $reportId, string $deviceId): ?array {
@@ -140,6 +193,25 @@ if ($method === 'GET') {
             }
         }
 
+        $lockState = readNormalizedLockState($locksDir, $fileId);
+        $activeDevicesSummary = [];
+        if ($lockState !== null && !empty($lockState['activeDevices'])) {
+            foreach ($lockState['activeDevices'] as $dev) {
+                $activeDevicesSummary[] = [
+                    'deviceId' => $dev['deviceId'],
+                    'deviceName' => $dev['deviceName'],
+                    'role' => $dev['role'],
+                    'lastSeenAt' => $dev['lastSeenAt'],
+                ];
+            }
+            usort($activeDevicesSummary, function ($a, $b) {
+                if ($a['role'] !== $b['role']) {
+                    return $a['role'] === 'editor' ? -1 : 1;
+                }
+                return strcmp($a['deviceName'], $b['deviceName']);
+            });
+        }
+
         $reports[] = [
             'id' => $fileId,
             'name' => $name,
@@ -147,6 +219,8 @@ if ($method === 'GET') {
             'photoCount' => $uploadedPhotos,
             'updatedAt' => date('Y-m-d H:i:s', $mtime),
             'fileSizeKb' => round(filesize($file) / 1024),
+            'activeDeviceCount' => count($activeDevicesSummary),
+            'activeDevices' => $activeDevicesSummary,
         ];
     }
 
@@ -186,21 +260,69 @@ if ($method === 'POST') {
             echo json_encode(['error' => 'reportId dan deviceId wajib diisi.']);
             exit;
         }
-        $existing = readActiveLock($locksDir, $reportId);
-        if ($existing !== null && $existing['deviceId'] !== $deviceId) {
-            echo json_encode(['acquired' => false, 'lock' => $existing]);
+        $now = time();
+        $resolvedName = $deviceName !== '' ? $deviceName : 'Perangkat';
+        $ipAddr = $_SERVER['REMOTE_ADDR'] ?? '';
+        $state = readNormalizedLockState($locksDir, $reportId) ?? [
+            'deviceId' => '',
+            'deviceName' => '',
+            'ip' => '',
+            'acquiredAt' => 0,
+            'expiresAt' => 0,
+            'activeDevices' => [],
+        ];
+
+        $hasOtherEditor = ($state['deviceId'] !== '' && $state['deviceId'] !== $deviceId);
+
+        if (!$hasOtherEditor) {
+            $state['deviceId'] = $deviceId;
+            $state['deviceName'] = $resolvedName;
+            $state['ip'] = $ipAddr;
+            $state['acquiredAt'] = $state['acquiredAt'] > 0 ? $state['acquiredAt'] : $now;
+            $state['expiresAt'] = $now + LOCK_TTL_SECONDS;
+            $state['activeDevices'][$deviceId] = [
+                'deviceId' => $deviceId,
+                'deviceName' => $resolvedName,
+                'ip' => $ipAddr,
+                'role' => 'editor',
+                'lastSeenAt' => $now,
+                'expiresAt' => $now + LOCK_TTL_SECONDS,
+            ];
+            writeFileAtomic($locksDir . '/' . $reportId . '.json', json_encode($state, JSON_PRETTY_PRINT));
+            echo json_encode([
+                'acquired' => true,
+                'lock' => [
+                    'deviceId' => $state['deviceId'],
+                    'deviceName' => $state['deviceName'],
+                    'ip' => $state['ip'],
+                    'acquiredAt' => $state['acquiredAt'],
+                    'expiresAt' => $state['expiresAt'],
+                ],
+                'activeDeviceCount' => count($state['activeDevices']),
+            ]);
             exit;
         }
-        $now = time();
-        $newLock = [
+
+        $state['activeDevices'][$deviceId] = [
             'deviceId' => $deviceId,
-            'deviceName' => $deviceName !== '' ? $deviceName : 'Perangkat',
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-            'acquiredAt' => $existing['acquiredAt'] ?? $now,
+            'deviceName' => $resolvedName,
+            'ip' => $ipAddr,
+            'role' => 'viewer',
+            'lastSeenAt' => $now,
             'expiresAt' => $now + LOCK_TTL_SECONDS,
         ];
-        writeFileAtomic($locksDir . '/' . $reportId . '.json', json_encode($newLock, JSON_PRETTY_PRINT));
-        echo json_encode(['acquired' => true, 'lock' => $newLock]);
+        writeFileAtomic($locksDir . '/' . $reportId . '.json', json_encode($state, JSON_PRETTY_PRINT));
+        echo json_encode([
+            'acquired' => false,
+            'lock' => [
+                'deviceId' => $state['deviceId'],
+                'deviceName' => $state['deviceName'],
+                'ip' => $state['ip'],
+                'acquiredAt' => $state['acquiredAt'],
+                'expiresAt' => $state['expiresAt'],
+            ],
+            'activeDeviceCount' => count($state['activeDevices']),
+        ]);
         exit;
     }
 
@@ -208,9 +330,21 @@ if ($method === 'POST') {
         $reportId = sanitizeId($payload['reportId'] ?? '');
         $deviceId = trim((string)($payload['deviceId'] ?? ''));
         if ($reportId !== '' && $deviceId !== '') {
-            $existing = readActiveLock($locksDir, $reportId);
-            if ($existing !== null && $existing['deviceId'] === $deviceId) {
-                @unlink($locksDir . '/' . $reportId . '.json');
+            $state = readNormalizedLockState($locksDir, $reportId);
+            if ($state !== null) {
+                unset($state['activeDevices'][$deviceId]);
+                if ($state['deviceId'] === $deviceId) {
+                    $state['deviceId'] = '';
+                    $state['deviceName'] = '';
+                    $state['ip'] = '';
+                    $state['acquiredAt'] = 0;
+                    $state['expiresAt'] = 0;
+                }
+                if ($state['deviceId'] === '' && empty($state['activeDevices'])) {
+                    @unlink($locksDir . '/' . $reportId . '.json');
+                } else {
+                    writeFileAtomic($locksDir . '/' . $reportId . '.json', json_encode($state, JSON_PRETTY_PRINT));
+                }
             }
         }
         echo json_encode(['released' => true]);

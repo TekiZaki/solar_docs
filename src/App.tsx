@@ -78,6 +78,32 @@ function buildPathFromRoute(view: ViewMode, phase: MaintenancePhaseKey): string 
   }
 }
 
+const WORKFLOW_SESSION_KEY = 'solar_docs_workflow_entered';
+
+function isDirectEntryAllowed(view: ViewMode): boolean {
+  return view === 'home' || view === 'json_explorer' || view === 'settings';
+}
+
+function hasWorkflowSession(): boolean {
+  try {
+    return window.sessionStorage.getItem(WORKFLOW_SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setWorkflowSession(active: boolean): void {
+  try {
+    if (active) {
+      window.sessionStorage.setItem(WORKFLOW_SESSION_KEY, '1');
+    } else {
+      window.sessionStorage.removeItem(WORKFLOW_SESSION_KEY);
+    }
+  } catch {
+    // ignore sessionStorage errors in restricted contexts
+  }
+}
+
 export const AppContent: React.FC = () => {
   const {
     state,
@@ -90,14 +116,35 @@ export const AppContent: React.FC = () => {
     isLockedByOther,
     lockOwner,
   } = useReport();
-  const initialRoute = React.useMemo(() => parseRouteFromPath(window.location.pathname), []);
+  const initialRoute = React.useMemo(() => {
+    const parsed = parseRouteFromPath(window.location.pathname);
+    const allowedOnLoad = isDirectEntryAllowed(parsed.view) || hasWorkflowSession();
+    if (!allowedOnLoad) {
+      return { view: 'home' as ViewMode, phase: 'physical' as MaintenancePhaseKey, redirected: true };
+    }
+    return { view: parsed.view, phase: parsed.phase ?? ('physical' as MaintenancePhaseKey), redirected: false };
+  }, []);
   const [currentView, setCurrentView] = useState<ViewMode>(initialRoute.view);
-  const [selectedPhase, setSelectedPhase] = useState<MaintenancePhaseKey>(
-    initialRoute.phase ?? 'physical'
-  );
+  const [selectedPhase, setSelectedPhase] = useState<MaintenancePhaseKey>(initialRoute.phase);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isMissingModalOpen, setIsMissingModalOpen] = useState(false);
   const isPoppingRef = React.useRef(false);
+  const hasEnteredViaHomeRef = React.useRef(
+    !isDirectEntryAllowed(initialRoute.view) && hasWorkflowSession()
+  );
+  const replaceNextUrlRef = React.useRef(initialRoute.redirected);
+
+  const navigateHome = React.useCallback(() => {
+    hasEnteredViaHomeRef.current = false;
+    setWorkflowSession(false);
+    setCurrentView('home');
+  }, []);
+
+  const enterWorkflowFromHome = React.useCallback(() => {
+    hasEnteredViaHomeRef.current = true;
+    setWorkflowSession(true);
+    setCurrentView('general_info');
+  }, []);
 
   // Only hold a report lock when inside an active report view (release on home/settings/json)
   React.useEffect(() => {
@@ -114,7 +161,14 @@ export const AppContent: React.FC = () => {
     }
     const targetPath = buildPathFromRoute(currentView, selectedPhase);
     if (window.location.pathname !== targetPath) {
-      window.history.pushState(null, '', targetPath + window.location.search);
+      if (replaceNextUrlRef.current) {
+        replaceNextUrlRef.current = false;
+        window.history.replaceState(null, '', targetPath + window.location.search);
+      } else {
+        window.history.pushState(null, '', targetPath + window.location.search);
+      }
+    } else {
+      replaceNextUrlRef.current = false;
     }
   }, [currentView, selectedPhase]);
 
@@ -122,6 +176,17 @@ export const AppContent: React.FC = () => {
   React.useEffect(() => {
     const handlePopState = () => {
       const next = parseRouteFromPath(window.location.pathname);
+      const canAccess = isDirectEntryAllowed(next.view) || hasEnteredViaHomeRef.current || hasWorkflowSession();
+      if (!canAccess) {
+        replaceNextUrlRef.current = true;
+        setCurrentView('home');
+        window.history.replaceState(null, '', NORMALIZED_BASE + window.location.search);
+        return;
+      }
+      if (next.view === 'home') {
+        hasEnteredViaHomeRef.current = false;
+        setWorkflowSession(false);
+      }
       isPoppingRef.current = true;
       setCurrentView(next.view);
       if (next.phase) {
@@ -324,7 +389,7 @@ export const AppContent: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setCurrentView('general_info')}
+                onClick={enterWorkflowFromHome}
                 className="w-full bg-slate-900 group-hover:bg-slate-800 text-white text-sm font-semibold py-3 rounded-lg shadow-sm transition flex items-center justify-center gap-2"
               >
                 <span>Buka Dokumentasi Pemeliharaan</span>
@@ -374,14 +439,14 @@ export const AppContent: React.FC = () => {
   }
 
   if (currentView === 'json_explorer') {
-    return <JsonExplorerPage onBack={() => setCurrentView('home')} />;
+    return <JsonExplorerPage onBack={navigateHome} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
       {/* Top Header */}
       <Header
-        onGoHome={() => setCurrentView('home')}
+        onGoHome={navigateHome}
         onOpenExport={() => setIsExportOpen(true)}
         onOpenMissingItems={() => setIsMissingModalOpen(true)}
         currentPhaseTitle={
@@ -415,7 +480,7 @@ export const AppContent: React.FC = () => {
             aria-disabled={isLockedByOther || undefined}
             onFocusCapture={isLockedByOther ? (e) => (e.target as HTMLElement).blur?.() : undefined}
           >
-            <ResetPage onBack={() => setCurrentView('home')} />
+            <ResetPage onBack={navigateHome} />
           </div>
         )}
 
@@ -424,7 +489,7 @@ export const AppContent: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 pb-2">
               <button
                 type="button"
-                onClick={() => setCurrentView('home')}
+                onClick={navigateHome}
                 className="inline-flex items-center gap-1 hover:text-slate-900 transition font-medium"
               >
                 &larr; Kembali ke Pilihan Alur

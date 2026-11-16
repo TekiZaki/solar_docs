@@ -291,6 +291,8 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isPasting, setIsPasting] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [pasteError, setPasteError] = useState('');
 
   const { isDraggingFile, dropHandlers } = usePhotoFileDrop(async (file) => {
@@ -343,6 +345,58 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
       setPasteError('Gagal membaca clipboard');
     } finally {
       setIsPasting(false);
+    }
+  };
+
+  const handleCopyImage = async () => {
+    const srcUrl =
+      effectiveImageUrl ||
+      slot.imageDataUrl ||
+      (slot.imagePath
+        ? `${import.meta.env.BASE_URL}${slot.imagePath}${slot.updatedAt ? `?v=${slot.updatedAt}` : ''}`
+        : '');
+    if (!srcUrl) return;
+
+    try {
+      setPasteError('');
+      if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+        setPasteError('Salin gambar tidak didukung browser ini');
+        return;
+      }
+      setIsCopying(true);
+
+      // Pass Promise<Blob> directly to ClipboardItem to preserve user activation across browsers
+      const pngBlobPromise = (async (): Promise<Blob> => {
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error('Gagal memuat gambar');
+        const srcBlob = await res.blob();
+        if (srcBlob.type === 'image/png') return srcBlob;
+
+        const bmp = await createImageBitmap(srcBlob);
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = bmp.width;
+          canvas.height = bmp.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Canvas tidak tersedia');
+          ctx.drawImage(bmp, 0, 0);
+          const pngBlob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, 'image/png')
+          );
+          if (!pngBlob) throw new Error('Gagal mengonversi ke PNG');
+          return pngBlob;
+        } finally {
+          bmp.close();
+        }
+      })();
+
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlobPromise })]);
+      setCopyStatus('copied');
+      setTimeout(() => setCopyStatus('idle'), 1800);
+    } catch {
+      setPasteError('Gagal menyalin gambar ke clipboard');
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -439,9 +493,19 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
               </span>
             </div>
 
+            {pasteError && (
+              <div className="absolute top-2 inset-x-2 flex justify-center pointer-events-none z-30">
+                <span className="text-[10px] font-medium bg-rose-600/90 text-white px-2 py-0.5 rounded shadow-sm text-center">
+                  {pasteError}
+                </span>
+              </div>
+            )}
+
             {/* Hover Actions Bar */}
             <div
-              className={`absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1.5 p-2 z-20 pointer-events-none ${
+              className={`absolute inset-0 bg-slate-900/40 transition flex flex-wrap content-center items-center justify-center gap-1.5 p-2 z-20 pointer-events-none ${
+                copyStatus === 'copied' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              } ${
                 isDragging ? 'hidden' : ''
               }`}
             >
@@ -466,6 +530,23 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
                 className="pointer-events-auto bg-white/95 hover:bg-white text-slate-800 text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
               >
                 Ganti
+              </button>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyImage();
+                }}
+                disabled={isCopying}
+                className={`pointer-events-auto text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition ${
+                  copyStatus === 'copied'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white/95 hover:bg-white disabled:bg-slate-200 text-slate-800'
+                }`}
+                title="Salin gambar ke clipboard"
+              >
+                {isCopying ? 'Menyalin...' : copyStatus === 'copied' ? 'Tersalin' : 'Salin'}
               </button>
               <button
                 type="button"

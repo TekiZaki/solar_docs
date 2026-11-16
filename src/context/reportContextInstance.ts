@@ -22,6 +22,13 @@ import type {
 } from '../types/schema';
 import type { ReportLockInfo } from '../lib/reportApi';
 
+export interface ActiveDeviceSummary {
+  deviceId: string;
+  deviceName: string;
+  role: 'editor' | 'viewer' | string;
+  lastSeenAt: number;
+}
+
 export interface ReportSummary {
   id: string;
   name: string;
@@ -29,6 +36,8 @@ export interface ReportSummary {
   photoCount: number;
   updatedAt: string;
   fileSizeKb: number;
+  activeDeviceCount?: number;
+  activeDevices?: ActiveDeviceSummary[];
 }
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'unsaved';
