@@ -15,7 +15,7 @@ ini_set('upload_max_filesize', '100M');
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Accept');
+header('Access-Control-Allow-Headers: Content-Type, Accept, X-Sync-Key');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
@@ -35,7 +35,52 @@ if (!is_dir($locksDir)) {
     mkdir($locksDir, 0777, true);
 }
 
-const LOCK_TTL_SECONDS = 30;
+const LOCK_TTL_SECONDS = 10;
+const DEFAULT_SYNC_KEY = 'solar-sync-2026';
+
+function resolveExpectedSyncKey(string $baseDataDir): string {
+    $keyFile = $baseDataDir . '/sync_key.txt';
+    if (file_exists($keyFile)) {
+        $fileKey = trim((string)@file_get_contents($keyFile));
+        if ($fileKey !== '') return $fileKey;
+    }
+    $envKey = trim((string)(getenv('SOLAR_SYNC_KEY') ?: ''));
+    if ($envKey !== '') return $envKey;
+    return DEFAULT_SYNC_KEY;
+}
+
+function appendSyncLog(string $baseDataDir, string $action, string $status, string $detail = ''): void {
+    $logFile = $baseDataDir . '/sync_log.json';
+    $logs = [];
+    if (file_exists($logFile)) {
+        $raw = readFileLocked($logFile);
+        $decoded = $raw !== false ? json_decode($raw, true) : null;
+        if (is_array($decoded)) {
+            $logs = $decoded;
+        }
+    }
+    array_unshift($logs, [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'action' => $action,
+        'status' => $status,
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+        'userAgent' => substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 120),
+        'detail' => $detail,
+    ]);
+    $logs = array_slice($logs, 0, 50);
+    writeFileAtomic($logFile, json_encode($logs, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+}
+
+function verifySyncAccess(string $baseDataDir, string $actionName): void {
+    $expected = resolveExpectedSyncKey($baseDataDir);
+    $provided = trim((string)($_SERVER['HTTP_X_SYNC_KEY'] ?? ($_GET['syncKey'] ?? '')));
+    if ($provided === '' || !hash_equals($expected, $provided)) {
+        appendSyncLog($baseDataDir, $actionName, 'rejected', 'Sync key tidak valid atau kosong');
+        http_response_code(403);
+        echo json_encode(['error' => 'Sync key tidak valid.']);
+        exit;
+    }
+}
 
 function readNormalizedLockState(string $locksDir, string $reportId): ?array {
     if ($reportId === '') return null;
@@ -105,6 +150,28 @@ function readActiveLock(string $locksDir, string $reportId): ?array {
     ];
 }
 
+function formatActiveDevicesSummary(?array $lockState): array {
+    $summary = [];
+    if ($lockState === null || empty($lockState['activeDevices']) || !is_array($lockState['activeDevices'])) {
+        return $summary;
+    }
+    foreach ($lockState['activeDevices'] as $dev) {
+        $summary[] = [
+            'deviceId' => $dev['deviceId'],
+            'deviceName' => $dev['deviceName'],
+            'role' => $dev['role'],
+            'lastSeenAt' => $dev['lastSeenAt'],
+        ];
+    }
+    usort($summary, function ($a, $b) {
+        if ($a['role'] !== $b['role']) {
+            return $a['role'] === 'editor' ? -1 : 1;
+        }
+        return strcmp($a['deviceName'], $b['deviceName']);
+    });
+    return $summary;
+}
+
 function isLockedByOtherDevice(string $locksDir, string $reportId, string $deviceId): ?array {
     if ($deviceId === '' || $reportId === '') return null;
     $lock = readActiveLock($locksDir, $reportId);
@@ -153,6 +220,194 @@ function writeFileAtomic(string $filePath, string $contents): bool {
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
+    $getAction = $_GET['action'] ?? '';
+    $baseDataDir = __DIR__ . '/../data';
+
+    if ($getAction === 'sync_manifest') {
+        verifySyncAccess($baseDataDir, 'sync_manifest');
+
+        $manifestReports = [];
+        $manifestImages = [];
+
+        $files = glob($dataDir . '/*.json') ?: [];
+        foreach ($files as $file) {
+            $fileId = basename($file, '.json');
+            $mtime = filemtime($file);
+            $rawContent = readFileLocked($file);
+            $decoded = $rawContent !== false ? json_decode($rawContent, true) : null;
+            $lokasi = is_array($decoded) ? ($decoded['location']['lokasi'] ?? '') : '';
+            $name = is_array($decoded) ? ($decoded['name'] ?? str_replace('_', ' ', $fileId)) : $fileId;
+
+            $uploadedPhotos = 0;
+            if (is_array($decoded) && !empty($decoded['photoSlots']) && is_array($decoded['photoSlots'])) {
+                foreach ($decoded['photoSlots'] as $slot) {
+                    if (!empty($slot['isUploaded']) && (!empty($slot['imagePath']) || !empty($slot['imageDataUrl']))) {
+                        $uploadedPhotos++;
+                    }
+                }
+            }
+
+            $manifestReports[] = [
+                'id' => $fileId,
+                'name' => $name,
+                'lokasi' => $lokasi,
+                'photoCount' => $uploadedPhotos,
+                'sizeBytes' => filesize($file) ?: 0,
+                'updatedAt' => date('Y-m-d H:i:s', $mtime),
+                'md5' => md5_file($file) ?: '',
+            ];
+        }
+
+        $dirs = glob($dataDir . '/*', GLOB_ONLYDIR) ?: [];
+        foreach ($dirs as $dirPath) {
+            $dirReportId = basename($dirPath);
+            $entries = @scandir($dirPath);
+            if (!is_array($entries)) continue;
+            foreach ($entries as $entryName) {
+                if ($entryName === '.' || $entryName === '..') continue;
+                $fullImgPath = $dirPath . '/' . $entryName;
+                if (!is_file($fullImgPath)) continue;
+                if (!preg_match('/\.(jpe?g|png|webp)$/i', $entryName)) continue;
+
+                $manifestImages[] = [
+                    'reportId' => $dirReportId,
+                    'fileName' => $entryName,
+                    'relativePath' => 'data/reports/' . $dirReportId . '/' . $entryName,
+                    'sizeBytes' => filesize($fullImgPath) ?: 0,
+                    'mtime' => filemtime($fullImgPath) ?: 0,
+                ];
+            }
+        }
+
+        usort($manifestReports, static fn($a, $b) => strcmp($b['updatedAt'], $a['updatedAt']));
+        appendSyncLog(
+            $baseDataDir,
+            'sync_manifest',
+            'ok',
+            count($manifestReports) . ' laporan, ' . count($manifestImages) . ' gambar'
+        );
+
+        echo json_encode([
+            'serverTime' => date('Y-m-d H:i:s'),
+            'totalReports' => count($manifestReports),
+            'totalImages' => count($manifestImages),
+            'reports' => $manifestReports,
+            'images' => $manifestImages,
+        ], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    if ($getAction === 'sync_image_hashes') {
+        verifySyncAccess($baseDataDir, 'sync_image_hashes');
+        $rawIds = trim((string)($_GET['reportIds'] ?? ''));
+        $ids = array_values(array_filter(array_map('sanitizeId', explode(',', $rawIds))));
+        $hashes = [];
+
+        foreach (array_slice($ids, 0, 15) as $rId) {
+            $dirPath = $dataDir . '/' . $rId;
+            if (!is_dir($dirPath)) continue;
+            $entries = @scandir($dirPath);
+            if (!is_array($entries)) continue;
+            $reportHashes = [];
+            foreach ($entries as $entryName) {
+                if ($entryName === '.' || $entryName === '..') continue;
+                $fullImgPath = $dirPath . '/' . $entryName;
+                if (!is_file($fullImgPath)) continue;
+                if (!preg_match('/\.(jpe?g|png|webp)$/i', $entryName)) continue;
+                $reportHashes[$entryName] = md5_file($fullImgPath) ?: '';
+            }
+            $hashes[$rId] = $reportHashes;
+        }
+
+        echo json_encode(['hashes' => $hashes], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    if ($getAction === 'sync_file') {
+        verifySyncAccess($baseDataDir, 'sync_file');
+        $type = $_GET['type'] ?? '';
+        $reportId = sanitizeId($_GET['reportId'] ?? '');
+        if ($reportId === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'reportId tidak valid.']);
+            exit;
+        }
+
+        if ($type === 'json') {
+            $targetJson = $dataDir . '/' . $reportId . '.json';
+            if (!is_file($targetJson)) {
+                http_response_code(404);
+                echo json_encode(['error' => 'JSON laporan tidak ditemukan.']);
+                exit;
+            }
+            $content = readFileLocked($targetJson);
+            if ($content === false) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Gagal membaca JSON laporan.']);
+                exit;
+            }
+            echo $content;
+            exit;
+        }
+
+        if ($type === 'image') {
+            $fileName = basename((string)($_GET['file'] ?? ''));
+            if (!preg_match('/^[a-zA-Z0-9_.-]+\.(jpe?g|png|webp)$/i', $fileName)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Nama berkas gambar tidak valid.']);
+                exit;
+            }
+            $targetImg = $dataDir . '/' . $reportId . '/' . $fileName;
+            if (!is_file($targetImg)) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Berkas gambar tidak ditemukan.']);
+                exit;
+            }
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $mime = $ext === 'png' ? 'image/png' : ($ext === 'webp' ? 'image/webp' : 'image/jpeg');
+            header('Content-Type: ' . $mime);
+            header('Content-Length: ' . filesize($targetImg));
+            readfile($targetImg);
+            exit;
+        }
+
+        http_response_code(400);
+        echo json_encode(['error' => 'Parameter type harus json atau image.']);
+        exit;
+    }
+
+    if ($getAction === 'active_devices') {
+        $lockFiles = glob($locksDir . '/*.json') ?: [];
+        $activeDevicesByReport = [];
+        foreach ($lockFiles as $lockFile) {
+            $reportId = basename($lockFile, '.json');
+            $lockState = readNormalizedLockState($locksDir, $reportId);
+            if ($lockState === null) continue;
+            $summary = formatActiveDevicesSummary($lockState);
+            if (!empty($summary)) {
+                $activeDevicesByReport[$reportId] = [
+                    'activeDeviceCount' => count($summary),
+                    'activeDevices' => $summary,
+                ];
+            }
+        }
+        echo json_encode(['activeDevicesByReport' => $activeDevicesByReport], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    if ($getAction === 'sync_logs') {
+        verifySyncAccess($baseDataDir, 'sync_logs');
+        $logFile = $baseDataDir . '/sync_log.json';
+        $logs = [];
+        if (file_exists($logFile)) {
+            $raw = readFileLocked($logFile);
+            $decoded = $raw !== false ? json_decode($raw, true) : null;
+            if (is_array($decoded)) $logs = $decoded;
+        }
+        echo json_encode(['logs' => $logs], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     $id = isset($_GET['id']) ? sanitizeId($_GET['id']) : '';
 
     if ($id !== '') {
@@ -194,23 +449,7 @@ if ($method === 'GET') {
         }
 
         $lockState = readNormalizedLockState($locksDir, $fileId);
-        $activeDevicesSummary = [];
-        if ($lockState !== null && !empty($lockState['activeDevices'])) {
-            foreach ($lockState['activeDevices'] as $dev) {
-                $activeDevicesSummary[] = [
-                    'deviceId' => $dev['deviceId'],
-                    'deviceName' => $dev['deviceName'],
-                    'role' => $dev['role'],
-                    'lastSeenAt' => $dev['lastSeenAt'],
-                ];
-            }
-            usort($activeDevicesSummary, function ($a, $b) {
-                if ($a['role'] !== $b['role']) {
-                    return $a['role'] === 'editor' ? -1 : 1;
-                }
-                return strcmp($a['deviceName'], $b['deviceName']);
-            });
-        }
+        $activeDevicesSummary = formatActiveDevicesSummary($lockState);
 
         $reports[] = [
             'id' => $fileId,

@@ -54,6 +54,7 @@ export interface ReportContextType {
   saveReportNow: () => Promise<boolean>;
   createReport: (name: string, lokasi?: string) => Promise<string | null>;
   refreshReportList: () => Promise<ReportSummary[]>;
+  refreshActiveDevices: () => Promise<void>;
   updateLocation: (fields: Partial<LocationInfo>) => void;
   updateRealizationDate: (index: number, fields: Partial<RealizationDate>) => void;
   updatePhotoSlot: (slotId: string, fields: Partial<PhotoSlot>) => void;

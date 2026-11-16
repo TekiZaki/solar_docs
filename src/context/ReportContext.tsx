@@ -17,7 +17,7 @@ import { DEFAULT_LOCATION, DEFAULT_REALIZATION_DATES } from '../constants/defaul
 import { calculateSTCDeviation } from '../lib/calculations';
 import {
   saveReportState, deleteSlotImage,
-  migrateReportImages, fetchReportList, createReportOnServer,
+  migrateReportImages, fetchReportList, fetchActiveDevicesMap, createReportOnServer,
 } from '../lib/reportApi';
 import {
   insertMeasurementInList, addMeasurementToList,
@@ -37,6 +37,32 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const list = await fetchReportList();
     setReportList(list);
     return list;
+  }, []);
+
+  const refreshActiveDevices = useCallback(async (): Promise<void> => {
+    const map = await fetchActiveDevicesMap();
+    if (!map) return;
+    setReportList((prev) => {
+      let changed = false;
+      const nextList = prev.map((rep) => {
+        const entry = map[rep.id];
+        const nextCount = entry ? entry.activeDeviceCount : 0;
+        const nextDevices = entry ? entry.activeDevices : [];
+        const prevDevices = rep.activeDevices || [];
+        const prevSig = prevDevices.map((d) => `${d.deviceId}:${d.deviceName}:${d.role}`).join('|');
+        const nextSig = nextDevices.map((d) => `${d.deviceId}:${d.deviceName}:${d.role}`).join('|');
+        if ((rep.activeDeviceCount ?? 0) === nextCount && prevSig === nextSig) {
+          return rep;
+        }
+        changed = true;
+        return {
+          ...rep,
+          activeDeviceCount: nextCount,
+          activeDevices: nextDevices,
+        };
+      });
+      return changed ? nextList : prev;
+    });
   }, []);
 
   const {
@@ -417,6 +443,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         saveReportNow,
         createReport,
         refreshReportList,
+        refreshActiveDevices,
         updateLocation,
         updateRealizationDate,
         updatePhotoSlot,

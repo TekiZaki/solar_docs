@@ -311,14 +311,23 @@ export const AppContent: React.FC = () => {
 
             <div className="flex items-center gap-2">
               {import.meta.env.DEV && (
-                <button
-                  type="button"
-                  onClick={() => setCurrentView('json_explorer')}
-                  title="Lihat dan edit seluruh berkas JSON"
-                  className="h-9 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-medium text-slate-800 transition shadow-sm"
-                >
-                  Data JSON
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('json_explorer')}
+                    title="Lihat dan edit seluruh berkas JSON"
+                    className="h-9 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-medium text-slate-800 transition shadow-sm"
+                  >
+                    Data JSON
+                  </button>
+                  <a
+                    href={`${NORMALIZED_BASE}api/sync_prod.php`}
+                    title="Sinkronisasi data prod ke lokal"
+                    className="h-9 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-medium text-slate-800 transition shadow-sm inline-flex items-center"
+                  >
+                    Sync Prod
+                  </a>
+                </>
               )}
 
               <button

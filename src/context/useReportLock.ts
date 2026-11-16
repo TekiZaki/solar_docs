@@ -19,7 +19,7 @@ import {
   type ReportLockInfo,
 } from '../lib/reportApi';
 
-const HEARTBEAT_MS = 10_000;
+const HEARTBEAT_MS = 3_000;
 
 export function useReportLock(
   currentReportId: string,

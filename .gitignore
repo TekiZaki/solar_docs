@@ -19,6 +19,7 @@ agents/
 handoff/
 recycle-bin/
 public/data/
+public/api/sync_prod.php
 
 # Redundant dumps and backups
 *.bak

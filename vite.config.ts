@@ -22,7 +22,10 @@ function excludeDataFromPublicCopy(): Plugin {
         if (entry.name === 'data') continue
         const srcPath = path.join(publicDir, entry.name)
         const destPath = path.join(outDir, entry.name)
-        fs.cpSync(srcPath, destPath, { recursive: true })
+        fs.cpSync(srcPath, destPath, {
+          recursive: true,
+          filter: (p) => path.basename(p) !== 'sync_prod.php',
+        })
       }
     },
   }

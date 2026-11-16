@@ -16,6 +16,8 @@ interface GeneralInfoProps {
   onContinueToPhases?: () => void;
 }
 
+const ACTIVE_DEVICES_POLL_MS = 3_000;
+
 export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) => {
   const {
     state,
@@ -28,6 +30,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
     saveReportNow,
     createReport,
     refreshReportList,
+    refreshActiveDevices,
     updateLocation,
   } = useReport();
 
@@ -42,6 +45,24 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
     }, 350);
     return () => clearTimeout(timer);
   }, [currentReportId, refreshReportList]);
+
+  useEffect(() => {
+    const poll = () => {
+      if (document.visibilityState === 'visible') {
+        refreshActiveDevices();
+      }
+    };
+    const intervalId = setInterval(poll, ACTIVE_DEVICES_POLL_MS);
+    const handleVisibilityOrFocus = () => poll();
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [refreshActiveDevices]);
 
   // loading another berkas discards local edits, so ask first when dirty
   const confirmIfDirty = () =>

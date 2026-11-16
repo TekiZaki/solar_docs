@@ -8,7 +8,7 @@
 // ---
 
 import type { MaintenanceReportState } from '../types/schema';
-import type { ReportSummary } from '../context/reportContextInstance';
+import type { ReportSummary, ActiveDeviceSummary } from '../context/reportContextInstance';
 import { getDeviceId } from './deviceIdentity';
 
 const API_ENDPOINT = `${import.meta.env.BASE_URL}api/reports.php`;
@@ -125,6 +125,29 @@ export async function migrateReportImages(
   } catch (err) {
     console.error('Migrate report images failed:', err);
     return { success: false, convertedCount: 0 };
+  }
+}
+
+export interface ReportActiveDevicesEntry {
+  activeDeviceCount: number;
+  activeDevices: ActiveDeviceSummary[];
+}
+
+export type ActiveDevicesByReportMap = Record<string, ReportActiveDevicesEntry>;
+
+export async function fetchActiveDevicesMap(): Promise<ActiveDevicesByReportMap | null> {
+  try {
+    const res = await fetch(`${API_ENDPOINT}?action=active_devices&_t=${Date.now()}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || typeof data.activeDevicesByReport !== 'object' || Array.isArray(data.activeDevicesByReport)) {
+      return {};
+    }
+    return data.activeDevicesByReport as ActiveDevicesByReportMap;
+  } catch {
+    return null;
   }
 }
 
