@@ -26,6 +26,10 @@ export interface PVStringAnalysis {
 }
 
 export interface PVAnalysisResult {
+  isPhysicalHidden: boolean;
+  isPreMeasureHidden: boolean;
+  isPostMeasureHidden: boolean;
+  hasFieldMeasurementData: boolean;
   brand: string;
   nominalPowerWp: number;
   ratedVoltageVmp: number;
@@ -60,12 +64,25 @@ export interface PVAnalysisResult {
 
 export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResult {
   const lokasi = state.location.lokasi.trim() || 'LOKASI PLTS';
+  const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
+  const isPhysicalHidden = hiddenPhases.has('physical');
+  const isPreMeasureHidden = hiddenPhases.has('pre_measure');
+  const isPostMeasureHidden = hiddenPhases.has('post_measure');
+  const hasFieldMeasurementData = !isPostMeasureHidden;
 
-  // Extract from Checklist II.I
-  const chkBrand = state.checklist.find((c) => c.no === '1.1')?.deskripsi.trim() || 'ADYA SOLAR';
-  const chkDaya = state.checklist.find((c) => c.no === '1.2')?.deskripsi.trim() || '250 Wp';
-  const chkTotal = state.checklist.find((c) => c.no === '1.3')?.deskripsi.trim() || '60 Unit';
-  const chkFuse = state.checklist.find((c) => c.no === '2.1.3')?.keterangan.trim() || '';
+  // Extract from Checklist II.I (omitted when physical phase is hidden)
+  const chkBrand = isPhysicalHidden
+    ? 'PV Module'
+    : state.checklist.find((c) => c.no === '1.1')?.deskripsi.trim() || 'ADYA SOLAR';
+  const chkDaya = isPhysicalHidden
+    ? ''
+    : state.checklist.find((c) => c.no === '1.2')?.deskripsi.trim() || '250 Wp';
+  const chkTotal = isPhysicalHidden
+    ? ''
+    : state.checklist.find((c) => c.no === '1.3')?.deskripsi.trim() || '60 Unit';
+  const chkFuse = isPhysicalHidden
+    ? ''
+    : state.checklist.find((c) => c.no === '2.1.3')?.keterangan.trim() || '';
 
   // Parse string count (default 3)
   let stringCount = 3;
@@ -116,6 +133,21 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
 
   const strings: PVStringAnalysis[] = [];
   for (let i = 1; i <= stringCount; i++) {
+    if (!hasFieldMeasurementData) {
+      strings.push({
+        name: `String ${i}`,
+        voc: 0,
+        irr: 0,
+        vmp: 0,
+        imp: 0,
+        deviasiVoc: 0,
+        deviasiVmp: 0,
+        rasioVmpVoc: 0,
+        vocPctSTC: 0,
+      });
+      continue;
+    }
+
     const voc = getMeasurementVal(`dc_voc_${(i - 1) * 2 + 1}`, defaultVocs[i - 1] || 719);
     const irr = getMeasurementVal(`dc_voc_${(i - 1) * 2 + 2}`, defaultIrrs[i - 1] || 560);
     const vmp = getMeasurementVal(`dc_vmp_${i}`, defaultVmps[i - 1] || 600);
@@ -144,19 +176,19 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
   const irrs = strings.map((s) => s.irr);
   const vmps = strings.map((s) => s.vmp);
 
-  const minVoc = Math.min(...vocs);
-  const maxVoc = Math.max(...vocs);
-  const deltaVoc = Math.round((maxVoc - minVoc) * 10) / 10;
+  const minVoc = hasFieldMeasurementData ? Math.min(...vocs) : 0;
+  const maxVoc = hasFieldMeasurementData ? Math.max(...vocs) : 0;
+  const deltaVoc = hasFieldMeasurementData ? Math.round((maxVoc - minVoc) * 10) / 10 : 0;
 
-  const minVocPct = Math.round((minVoc / vocSTC) * 1000) / 10;
-  const maxVocPct = Math.round((maxVoc / vocSTC) * 1000) / 10;
+  const minVocPct = hasFieldMeasurementData ? Math.round((minVoc / vocSTC) * 1000) / 10 : 0;
+  const maxVocPct = hasFieldMeasurementData ? Math.round((maxVoc / vocSTC) * 1000) / 10 : 0;
 
-  const minIrr = Math.min(...irrs);
-  const maxIrr = Math.max(...irrs);
-  const deltaIrr = Math.round((maxIrr - minIrr) * 10) / 10;
+  const minIrr = hasFieldMeasurementData ? Math.min(...irrs) : 0;
+  const maxIrr = hasFieldMeasurementData ? Math.max(...irrs) : 0;
+  const deltaIrr = hasFieldMeasurementData ? Math.round((maxIrr - minIrr) * 10) / 10 : 0;
 
-  const minVmp = Math.min(...vmps);
-  const maxVmp = Math.max(...vmps);
+  const minVmp = hasFieldMeasurementData ? Math.min(...vmps) : 0;
+  const maxVmp = hasFieldMeasurementData ? Math.max(...vmps) : 0;
 
   // Identify outlier string (lowest Vmp)
   const sortedByVmp = [...strings].sort((a, b) => a.vmp - b.vmp);
@@ -166,15 +198,25 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
   // Executive Conclusion
   const vocListStr = strings.map((s) => `${s.voc} V`).join(', ');
   const vmpListStr = strings.map((s) => `${s.vmp} V`).join(', ');
-  const executiveConclusion =
-    `Berdasarkan hasil inspeksi, pembersihan, pengukuran kelistrikan dan analisa parameter PV setelah maintenance, PLTS Rooftop ${lokasi} secara umum masih berada dalam kondisi operasional.\n` +
-    `Hasil pengukuran Voc menunjukkan nilai ${vocListStr} untuk ${strings.map((s) => s.name).join(', ')}. Keseragaman tersebut menunjukkan bahwa karakteristik open circuit string relatif baik dan tidak menunjukkan indikasi kuat adanya kehilangan modul seri atau kegagalan string berdasarkan parameter Voc.\n` +
-    `Nilai Vmp yang diperoleh adalah ${vmpListStr}. ${balancedStrings.map((s) => s.name).join(' dan ')} menunjukkan nilai yang sangat berdekatan, sedangkan ${outlierString.name} memiliki Vmp lebih rendah dibandingkan string lainnya.\n` +
-    `Hal yang perlu menjadi perhatian adalah ${outlierString.name} memiliki deviasi Vmp yang lebih rendah, sehingga kondisi tersebut merupakan indikasi yang layak untuk dilakukan monitoring dan pemeriksaan lanjutan.\n` +
-    `Secara keseluruhan, tidak ditemukan indikasi dari data pengukuran yang menunjukkan kegagalan total pada salah satu string. Namun, ${outlierString.name} sebaiknya ditetapkan sebagai string yang perlu dipantau lebih lanjut pada maintenance berikutnya.`;
+  const executiveConclusion = !hasFieldMeasurementData
+    ? `Pengukuran pasca pembersihan (Tahap II.IV) tidak dilakukan/dihilangkan pada PLTS Rooftop ${lokasi}, sehingga data pengukuran dan analisa performa pasca pemeliharaan tidak tersedia (-).`
+    : `Berdasarkan hasil inspeksi, pembersihan, pengukuran kelistrikan dan analisa parameter PV setelah maintenance, PLTS Rooftop ${lokasi} secara umum masih berada dalam kondisi operasional.\n` +
+      `Hasil pengukuran Voc menunjukkan nilai ${vocListStr} untuk ${strings.map((s) => s.name).join(', ')}. Keseragaman tersebut menunjukkan bahwa karakteristik open circuit string relatif baik dan tidak menunjukkan indikasi kuat adanya kehilangan modul seri atau kegagalan string berdasarkan parameter Voc.\n` +
+      `Nilai Vmp yang diperoleh adalah ${vmpListStr}. ${balancedStrings.map((s) => s.name).join(' dan ')} menunjukkan nilai yang sangat berdekatan, sedangkan ${outlierString.name} memiliki Vmp lebih rendah dibandingkan string lainnya.\n` +
+      `Hal yang perlu menjadi perhatian adalah ${outlierString.name} memiliki deviasi Vmp yang lebih rendah, sehingga kondisi tersebut merupakan indikasi yang layak untuk dilakukan monitoring dan pemeriksaan lanjutan.\n` +
+      `Secara keseluruhan, tidak ditemukan indikasi dari data pengukuran yang menunjukkan kegagalan total pada salah satu string. Namun, ${outlierString.name} sebaiknya ditetapkan sebagai string yang perlu dipantau lebih lanjut pada maintenance berikutnya.`;
 
   // 10 Technical Recommendations
-  const technicalRecommendations: TechnicalRecommendationItem[] = [
+  const technicalRecommendations: TechnicalRecommendationItem[] = !hasFieldMeasurementData
+    ? [
+        {
+          id: 'rec_01',
+          no: '1',
+          parameterTemuan: 'Tahap II.IV (Pengukuran Pasca Pembersihan) tidak dilaksanakan (-)',
+          rekomendasiTeknis: 'Lakukan pemeriksaan dan perbaikan komponen yang mengalami kerusakan sebelum pengukuran pasca pembersihan dapat dilakukan.',
+        },
+      ]
+    : [
     {
       id: 'rec_01',
       no: '1',
@@ -237,29 +279,31 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
     },
   ];
 
-  // Extract Damage Inventory from NOK items in Checklist II.I
+  // Extract Damage Inventory from NOK items in Checklist II.I (skip when physical phase is hidden)
   const detectedDamages: DamageItem[] = [];
   let dmgIdx = 1;
-  for (const item of state.checklist) {
-    const textDesc = item.deskripsi.toUpperCase();
-    const textKet = item.keterangan.toUpperCase();
-    if (
-      textDesc.includes('NOK') ||
-      textKet.includes('NOK') ||
-      textDesc.includes('RUSAK') ||
-      textKet.includes('RUSAK') ||
-      textDesc.includes('OFFLINE') ||
-      textKet.includes('OFFLINE')
-    ) {
-      detectedDamages.push({
-        id: `dmg_auto_${dmgIdx}`,
-        no: String(dmgIdx++),
-        lokasi,
-        kerusakanDiLokasi: `Kondisi ${item.item}: ${item.deskripsi || 'NOK'} ${item.keterangan ? `(${item.keterangan})` : ''}`.trim(),
-        perbaikanYangDilakukan: 'Pemeriksaan fisik dan pengujian koneksi',
-        updateKerusakan: 'Perlu tindak lanjut / perbaikan',
-        rekomendasi: `Perbaikan atau penggantian komponen ${item.item}`,
-      });
+  if (!isPhysicalHidden) {
+    for (const item of state.checklist) {
+      const textDesc = item.deskripsi.toUpperCase();
+      const textKet = item.keterangan.toUpperCase();
+      if (
+        textDesc.includes('NOK') ||
+        textKet.includes('NOK') ||
+        textDesc.includes('RUSAK') ||
+        textKet.includes('RUSAK') ||
+        textDesc.includes('OFFLINE') ||
+        textKet.includes('OFFLINE')
+      ) {
+        detectedDamages.push({
+          id: `dmg_auto_${dmgIdx}`,
+          no: String(dmgIdx++),
+          lokasi,
+          kerusakanDiLokasi: `Kondisi ${item.item}: ${item.deskripsi || 'NOK'} ${item.keterangan ? `(${item.keterangan})` : ''}`.trim(),
+          perbaikanYangDilakukan: 'Pemeriksaan fisik dan pengujian koneksi',
+          updateKerusakan: 'Perlu tindak lanjut / perbaikan',
+          rekomendasi: `Perbaikan atau penggantian komponen ${item.item}`,
+        });
+      }
     }
   }
 
@@ -277,6 +321,10 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
   }
 
   return {
+    isPhysicalHidden,
+    isPreMeasureHidden,
+    isPostMeasureHidden,
+    hasFieldMeasurementData,
     brand: chkBrand,
     nominalPowerWp,
     ratedVoltageVmp,

@@ -12,6 +12,7 @@ import { useReport } from '../../context/useReport';
 import { PhotoCard } from '../common/PhotoCard';
 import { RealizationDateCard } from '../common/RealizationDateCard';
 import { PhaseDateBar } from '../common/PhaseDateBar';
+import { PhaseHideBanner, PhaseHideToggleButton } from '../common/PhaseHideBanner';
 import { NON_EDITABLE_CHECKLIST_IDS } from '../../constants/defaultData';
 
 export const PhasePhysical: React.FC = () => {
@@ -51,17 +52,22 @@ export const PhasePhysical: React.FC = () => {
   return (
     <div className="space-y-6 text-left">
       {/* Header */}
-      <div className="border-b border-black pb-3">
-        <div className="inline-block text-xs font-semibold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded border border-sky-200 mb-1">
-          Tahap II.I
+      <div className="border-b border-black pb-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+        <div>
+          <div className="inline-block text-xs font-semibold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded border border-sky-200 mb-1">
+            Tahap II.I
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900">
+            II.I. PENGECEKAN KONDISI INSTALASI
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Inspeksi visual komponen utama PLTS saat tiba di lokasi sebelum pekerjaan pembersihan.
+          </p>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">
-          II.I. PENGECEKAN KONDISI INSTALASI
-        </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Inspeksi visual komponen utama PLTS saat tiba di lokasi sebelum pekerjaan pembersihan.
-        </p>
+        <PhaseHideToggleButton phaseKey="physical" phaseLabel="II.I. Pengecekan Kondisi Instalasi" />
       </div>
+
+      <PhaseHideBanner phaseKey="physical" phaseLabel="II.I. Pengecekan Kondisi Instalasi" />
 
       {/* Tanggal & Cuaca Realisasi: 1. Pengecekan & Pengukuran Pra Pembersihan */}
       {praDate && (

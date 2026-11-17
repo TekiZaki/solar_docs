@@ -9,14 +9,55 @@
 
 import React from 'react';
 import { useReport } from '../../context/useReport';
+import type { MaintenancePhaseKey } from '../../types/schema';
 
-export type MaintenancePhaseKey =
-  | 'physical'
-  | 'pre_measure'
-  | 'cleaning'
-  | 'post_measure'
-  | 'analysis'
-  | 'damage_rec';
+export type { MaintenancePhaseKey };
+
+const CORE_PHASES: {
+  key: 'physical' | 'pre_measure' | 'cleaning' | 'post_measure';
+  badge: string;
+  badgeClass: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+}[] = [
+  {
+    key: 'physical',
+    badge: 'TAHAP II.I',
+    badgeClass: 'text-sky-700 bg-sky-50 border-sky-200',
+    title: 'PENGECEKAN KONDISI INSTALASI',
+    description:
+      'Inspeksi visual komponen utama saat tiba (Inverter, DC Box, AC Box, Smart TV, Panel Atap) & pengisian checklist fisik 45 item.',
+    actionLabel: 'Buka Pengecekan Fisik',
+  },
+  {
+    key: 'pre_measure',
+    badge: 'TAHAP II.II',
+    badgeClass: 'text-amber-700 bg-amber-50 border-amber-200',
+    title: 'PENGUKURAN PRA PEMBERSIHAN',
+    description:
+      'Pengukuran parameter elektrik DC (Vmp/Imp), tegangan 3-fasa AC, arus fasa, resistansi grounding pra-cuci, dan foto alat ukur.',
+    actionLabel: 'Buka Pengukuran Pra',
+  },
+  {
+    key: 'cleaning',
+    badge: 'TAHAP II.III',
+    badgeClass: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+    title: 'PEMBERSIHAN',
+    description:
+      'Foto kondisi panel sebelum dibersihkan, pengecekan thermal imager & IR thermometer, proses pencucian modul, dan pengecekan pasca cuci.',
+    actionLabel: 'Buka Pembersihan PV',
+  },
+  {
+    key: 'post_measure',
+    badge: 'TAHAP II.IV',
+    badgeClass: 'text-indigo-700 bg-indigo-50 border-indigo-200',
+    title: 'PENGUKURAN PASCA PEMBERSIHAN',
+    description:
+      'Pengujian performa elektrik pasca-cuci, verifikasi kenaikan arus Vmp/Imp, pengukuran AC & grounding pasca pemeliharaan.',
+    actionLabel: 'Buka Pengukuran Pasca',
+  },
+];
 
 interface PhaseSelectionHubProps {
   onSelectPhase: (phase: MaintenancePhaseKey) => void;
@@ -31,9 +72,11 @@ export const PhaseSelectionHub: React.FC<PhaseSelectionHubProps> = ({
   onOpenExport,
   onOpenMissingItems,
 }) => {
-  const { state, migrateImages } = useReport();
+  const { state, migrateImages, setPhaseHidden } = useReport();
   const [isMigrating, setIsMigrating] = React.useState(false);
   const [migrateStatus, setMigrateStatus] = React.useState<{ text: string; error?: boolean } | null>(null);
+
+  const hiddenSet = new Set<string>(state.hiddenPhases ?? []);
 
   const getStats = (phaseKey: string) => {
     const slots = Object.values(state.photoSlots).filter((s) => s.phaseKey === phaseKey);
@@ -41,15 +84,11 @@ export const PhaseSelectionHub: React.FC<PhaseSelectionHubProps> = ({
     return { uploaded, total: slots.length };
   };
 
-  const p1 = getStats('physical');
-  const p2 = getStats('pre_measure');
-  const p3 = getStats('cleaning');
-  const p4 = getStats('post_measure');
-
-  const totalUploaded = Object.values(state.photoSlots).filter((s) => s.isUploaded).length;
-  const totalSlots = Object.keys(state.photoSlots).length;
+  const activeSlots = Object.values(state.photoSlots).filter((s) => !hiddenSet.has(s.phaseKey));
+  const totalUploaded = activeSlots.filter((s) => s.isUploaded).length;
+  const totalSlots = activeSlots.length;
   const missingCount = totalSlots - totalUploaded;
-  const base64SlotsCount = Object.values(state.photoSlots).filter(
+  const base64SlotsCount = activeSlots.filter(
     (s) => s.isUploaded && !s.imagePath && s.imageDataUrl
   ).length;
 
@@ -168,113 +207,70 @@ export const PhaseSelectionHub: React.FC<PhaseSelectionHubProps> = ({
 
       {/* 4 Core Maintenance Phase Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Phase 1 */}
-        <div
-          onClick={() => onSelectPhase('physical')}
-          className="bg-white border-2 border-black hover:border-slate-900 rounded-xl p-5 hover:bg-gray-300 transition cursor-pointer flex flex-col justify-between gap-4 group"
-        >
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
-                TAHAP II.I
-              </span>
-              <span className="text-xs font-mono font-medium text-slate-500">
-                {p1.uploaded}/{p1.total} Foto
-              </span>
+        {CORE_PHASES.map((phase) => {
+          const stats = getStats(phase.key);
+          const isHidden = hiddenSet.has(phase.key);
+          return (
+            <div
+              key={phase.key}
+              onClick={() => onSelectPhase(phase.key)}
+              className={`border-2 border-black rounded-xl p-5 transition cursor-pointer flex flex-col justify-between gap-4 group ${
+                isHidden
+                  ? 'bg-slate-100 opacity-65 grayscale hover:opacity-85'
+                  : 'bg-white hover:border-slate-900 hover:bg-gray-300'
+              }`}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded border ${phase.badgeClass}`}>
+                      {phase.badge}
+                    </span>
+                    {isHidden && (
+                      <span className="text-[11px] font-semibold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded">
+                        Dihilangkan
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-medium text-slate-500">
+                      {stats.uploaded}/{stats.total} Foto
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPhaseHidden(phase.key, !isHidden);
+                      }}
+                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border transition ${
+                        isHidden
+                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                      }`}
+                      title={
+                        isHidden
+                          ? `Tampilkan kembali ${phase.badge}`
+                          : `Hilangkan ${phase.badge} dari laporan dan ekspor DOCX`
+                      }
+                    >
+                      {isHidden ? 'Tampilkan' : 'Hilangkan'}
+                    </button>
+                  </div>
+                </div>
+                <h4 className="text-base font-bold text-slate-900 group-hover:text-slate-800">
+                  {phase.title}
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {phase.description}
+                </p>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-black text-xs font-semibold text-slate-900 group-hover:translate-x-0.5 transition-transform">
+                <span>{phase.actionLabel}</span>
+                <span>&rarr;</span>
+              </div>
             </div>
-            <h4 className="text-base font-bold text-slate-900 group-hover:text-slate-800">
-              PENGECEKAN KONDISI INSTALASI
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Inspeksi visual komponen utama saat tiba (Inverter, DC Box, AC Box, Smart TV, Panel Atap) & pengisian checklist fisik 45 item.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-black text-xs font-semibold text-slate-900 group-hover:translate-x-0.5 transition-transform">
-            <span>Buka Pengecekan Fisik</span>
-            <span>&rarr;</span>
-          </div>
-        </div>
-
-        {/* Phase 2 */}
-        <div
-          onClick={() => onSelectPhase('pre_measure')}
-          className="bg-white border-2 border-black hover:border-slate-900 rounded-xl p-5 hover:bg-gray-300 transition cursor-pointer flex flex-col justify-between gap-4 group"
-        >
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                TAHAP II.II
-              </span>
-              <span className="text-xs font-mono font-medium text-slate-500">
-                {p2.uploaded}/{p2.total} Foto
-              </span>
-            </div>
-            <h4 className="text-base font-bold text-slate-900 group-hover:text-slate-800">
-              PENGUKURAN PRA PEMBERSIHAN
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Pengukuran parameter elektrik DC (Vmp/Imp), tegangan 3-fasa AC, arus fasa, resistansi grounding pra-cuci, dan foto alat ukur.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-black text-xs font-semibold text-slate-900 group-hover:translate-x-0.5 transition-transform">
-            <span>Buka Pengukuran Pra</span>
-            <span>&rarr;</span>
-          </div>
-        </div>
-
-        {/* Phase 3 */}
-        <div
-          onClick={() => onSelectPhase('cleaning')}
-          className="bg-white border-2 border-black hover:border-slate-900 rounded-xl p-5 hover:bg-gray-300 transition cursor-pointer flex flex-col justify-between gap-4 group"
-        >
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                TAHAP II.III
-              </span>
-              <span className="text-xs font-mono font-medium text-slate-500">
-                {p3.uploaded}/{p3.total} Foto
-              </span>
-            </div>
-            <h4 className="text-base font-bold text-slate-900 group-hover:text-slate-800">
-              PEMBERSIHAN
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Foto kondisi panel sebelum dibersihkan, pengecekan thermal imager & IR thermometer, proses pencucian modul, dan pengecekan pasca cuci.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-black text-xs font-semibold text-slate-900 group-hover:translate-x-0.5 transition-transform">
-            <span>Buka Pembersihan PV</span>
-            <span>&rarr;</span>
-          </div>
-        </div>
-
-        {/* Phase 4 */}
-        <div
-          onClick={() => onSelectPhase('post_measure')}
-          className="bg-white border-2 border-black hover:border-slate-900 rounded-xl p-5 hover:bg-gray-300 transition cursor-pointer flex flex-col justify-between gap-4 group"
-        >
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                TAHAP II.IV
-              </span>
-              <span className="text-xs font-mono font-medium text-slate-500">
-                {p4.uploaded}/{p4.total} Foto
-              </span>
-            </div>
-            <h4 className="text-base font-bold text-slate-900 group-hover:text-slate-800">
-              PENGUKURAN PASCA PEMBERSIHAN
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Pengujian performa elektrik pasca-cuci, verifikasi kenaikan arus Vmp/Imp, pengukuran AC & grounding pasca pemeliharaan.
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-black text-xs font-semibold text-slate-900 group-hover:translate-x-0.5 transition-transform">
-            <span>Buka Pengukuran Pasca</span>
-            <span>&rarr;</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Secondary Steps: Analysis, Damage/Recommendations, and DOCX Export */}

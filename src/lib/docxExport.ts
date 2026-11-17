@@ -150,7 +150,8 @@ function updateCoverAndLocationTables(tables: HTMLCollectionOf<Element>, state: 
 
 function updateRealizationDatesTable(tables: HTMLCollectionOf<Element>, state: MaintenanceReportState) {
   if (tables.length > 2) {
-    const t2Rows = tables[2].getElementsByTagNameNS(W_NS, 'tr');
+    const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
+    const t2Rows = Array.from(tables[2].getElementsByTagNameNS(W_NS, 'tr'));
     if (t2Rows.length >= 9) {
       const pra = state.realizationDates.find((r) => r.phase === 'pra');
       if (pra) {
@@ -166,6 +167,19 @@ function updateRealizationDatesTable(tables: HTMLCollectionOf<Element>, state: M
       if (psc) {
         setTcText(t2Rows[7].getElementsByTagNameNS(W_NS, 'tc')[1], psc.tanggalPelaksanaan);
         setTcText(t2Rows[8].getElementsByTagNameNS(W_NS, 'tc')[1], psc.kondisiCuaca);
+      }
+
+      const removeRows = (rows: Element[]) => {
+        for (const r of rows) r.parentNode?.removeChild(r);
+      };
+      if (hiddenPhases.has('physical') && hiddenPhases.has('pre_measure')) {
+        removeRows(t2Rows.slice(0, 3));
+      }
+      if (hiddenPhases.has('cleaning')) {
+        removeRows(t2Rows.slice(3, 6));
+      }
+      if (hiddenPhases.has('post_measure')) {
+        removeRows(t2Rows.slice(6, 9));
       }
     }
   }
@@ -568,6 +582,12 @@ function appendStandardColumn(tbl: Element, standardsInRowOrder: string[]) {
 }
 
 function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: MaintenanceReportState) {
+  const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
+  const isPreHidden = hiddenPhases.has('pre_measure');
+  const isPostHidden = hiddenPhases.has('post_measure');
+  const pickBefore = (val: string) => (isPreHidden ? '-' : val);
+  const pickAfter = (val: string) => (isPostHidden ? '-' : val);
+
   const vmpItems = state.measurements.filter((m) => m.id.startsWith('dc_vmp_') && !m.excludeFromDocx);
   const impItems = state.measurements.filter((m) => m.id.startsWith('dc_imp_') && !m.excludeFromDocx);
   const vocItems = state.hidePVAnalisis
@@ -579,8 +599,8 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
     if (cells.length >= 4) {
       setTcText(cells[0], no);
       setTcText(cells[1], parameter);
-      setTcText(cells[2], before, blank);
-      setTcText(cells[3], after, blank);
+      setTcText(cells[2], blank ? before : pickBefore(before), blank);
+      setTcText(cells[3], blank ? after : pickAfter(after), blank);
     }
     if (cells.length >= 5) {
       setTcText(cells[4], standard, true);
@@ -689,8 +709,8 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
         } else if (item && cells.length >= 4) {
           setTcText(cells[0], item.no);
           setTcText(cells[1], item.parameter);
-          setTcText(cells[2], item.hasilBefore);
-          setTcText(cells[3], item.hasilAfter);
+          setTcText(cells[2], pickBefore(item.hasilBefore));
+          setTcText(cells[3], pickAfter(item.hasilAfter));
         }
       }
     });
@@ -803,18 +823,23 @@ function updateSTCTables(tables: HTMLCollectionOf<Element>, state: MaintenanceRe
     } else {
       const rows = t58.getElementsByTagNameNS(W_NS, 'tr');
       if (rows.length >= 5) {
-        analysis.strings.forEach((s, idx) => {
-          if (rows[1 + idx]) {
-            const cells = rows[1 + idx].getElementsByTagNameNS(W_NS, 'tc');
-            if (cells.length >= 5) {
-              setTcText(cells[0], s.name);
-              setTcText(cells[1], `${s.voc} V`);
-              setTcText(cells[2], `${s.irr} W/m²`);
-              setTcText(cells[3], `${s.vmp} V`);
-              setTcText(cells[4], `${s.deviasiVmp < 0 ? '−' : ''}${formatIndoNumber(Math.abs(s.deviasiVmp), 2)}%`);
-            }
+      analysis.strings.forEach((s, idx) => {
+        if (rows[1 + idx]) {
+          const cells = rows[1 + idx].getElementsByTagNameNS(W_NS, 'tc');
+          if (cells.length >= 5) {
+            setTcText(cells[0], s.name);
+            setTcText(cells[1], analysis.hasFieldMeasurementData ? `${s.voc} V` : '-');
+            setTcText(cells[2], analysis.hasFieldMeasurementData ? `${s.irr} W/m²` : '-');
+            setTcText(cells[3], analysis.hasFieldMeasurementData ? `${s.vmp} V` : '-');
+            setTcText(
+              cells[4],
+              analysis.hasFieldMeasurementData
+                ? `${s.deviasiVmp < 0 ? '−' : ''}${formatIndoNumber(Math.abs(s.deviasiVmp), 2)}%`
+                : '-'
+            );
           }
-        });
+        }
+      });
         const stcCells = rows[4].getElementsByTagNameNS(W_NS, 'tc');
         if (stcCells.length >= 4) {
           setTcText(stcCells[0], 'STC');
@@ -835,9 +860,12 @@ function updateSTCTables(tables: HTMLCollectionOf<Element>, state: MaintenanceRe
           const cells = rows[1 + idx].getElementsByTagNameNS(W_NS, 'tc');
           if (cells.length >= 4) {
             setTcText(cells[0], s.name);
-            setTcText(cells[1], `${s.voc} V`);
-            setTcText(cells[2], `${s.vmp} V`);
-            setTcText(cells[3], `${formatIndoNumber(s.rasioVmpVoc, 2)}%`);
+            setTcText(cells[1], analysis.hasFieldMeasurementData ? `${s.voc} V` : '-');
+            setTcText(cells[2], analysis.hasFieldMeasurementData ? `${s.vmp} V` : '-');
+            setTcText(
+              cells[3],
+              analysis.hasFieldMeasurementData ? `${formatIndoNumber(s.rasioVmpVoc, 2)}%` : '-'
+            );
           }
         }
       });
@@ -1124,6 +1152,15 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
 
     // VOC SECTION PARAGRAPHS
     if (activeSection === 'VOC') {
+      if (!analysis.hasFieldMeasurementData) {
+        if (textContent.startsWith('Hasil pengukuran menunjukkan')) {
+          setParagraphText(p, 'Hasil pengukuran pasca pembersihan (Tahap II.IV): - (tahap dihilangkan)');
+        } else {
+          setParagraphText(p, '', true);
+        }
+        continue;
+      }
+
       if (textContent === 'String 1') { currentVocString = 1; continue; }
       if (textContent === 'String 2') { currentVocString = 2; continue; }
       if (textContent === 'String 3') { currentVocString = 3; continue; }
@@ -1189,6 +1226,18 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
 
     // VMP SECTION PARAGRAPHS
     if (activeSection === 'VMP') {
+      if (!analysis.hasFieldMeasurementData) {
+        if (textContent.startsWith('Nilai Vmp teoritis') || textContent.startsWith('Hubungan Vmp terhadap Voc')) {
+          continue;
+        }
+        if (textContent.startsWith('Hasil pengukuran setelah maintenance')) {
+          setParagraphText(p, 'Hasil pengukuran pasca pembersihan (Tahap II.IV): - (tahap dihilangkan)');
+        } else {
+          setParagraphText(p, '', true);
+        }
+        continue;
+      }
+
       if (textContent === 'String 1' || textContent === 'String 1:') { currentVmpString = 1; continue; }
       if (textContent === 'String 2' || textContent === 'String 2:') { currentVmpString = 2; continue; }
       if (textContent === 'String 3' || textContent === 'String 3:') { currentVmpString = 3; continue; }
@@ -1242,6 +1291,17 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
 
     // PV MODULE CONCLUSION SECTION
     if (activeSection === 'KESIMPULAN_PV') {
+      if (!analysis.hasFieldMeasurementData) {
+        if (textContent.includes('performa PV array')) {
+          setParagraphText(
+            p,
+            'Tahap pengukuran pasca pembersihan (II.IV) dihilangkan pada ' + (state.location.lokasi.trim() || 'Lokasi') + ', sehingga analisa performa pasca pembersihan tidak tersedia (-).'
+          );
+        } else {
+          setParagraphText(p, '', true);
+        }
+        continue;
+      }
       if (textContent.includes('performa PV array')) {
         setParagraphText(
           p,
@@ -1300,6 +1360,9 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
         );
         if (customExec) {
           setParagraphText(p, customExec);
+          hasSetExecutiveSummary = true;
+        } else if (!analysis.hasFieldMeasurementData) {
+          setParagraphText(p, analysis.executiveConclusion);
           hasSetExecutiveSummary = true;
         } else {
           setParagraphText(
@@ -1386,11 +1449,136 @@ async function populateTemplatePhotos(
   state: MaintenanceReportState,
   plBytes: Uint8Array
 ): Promise<void> {
+  const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
   for (const meta of PHOTO_SLOTS_CATALOG) {
+    if (hiddenPhases.has(meta.phaseKey)) continue;
     const slot = state.photoSlots[meta.id];
     const zipPath = `word/${meta.mediaTarget}`;
     const bytes = await resolveSlotBytes(slot, plBytes);
     zip.file(zipPath, bytes);
+  }
+}
+
+function removeHiddenPhaseSections(xmlDoc: Document, state: MaintenanceReportState): void {
+  const hidden = new Set<string>(state.hiddenPhases ?? []);
+  const targetPhases = (['physical', 'pre_measure', 'cleaning', 'post_measure'] as const).filter(
+    (p) => hidden.has(p)
+  );
+  if (targetPhases.length === 0) return;
+
+  const body = xmlDoc.getElementsByTagNameNS(W_NS, 'body')[0];
+  if (!body) return;
+
+  const isBlankSpacer = (el: Element): boolean =>
+    el.localName === 'p' &&
+    !(el.textContent || '').trim() &&
+    el.getElementsByTagNameNS(W_NS, 'br').length === 0 &&
+    el.getElementsByTagNameNS(W_NS, 'drawing').length === 0 &&
+    el.getElementsByTagNameNS(W_NS, 'sectPr').length === 0;
+
+  const isPageBreakOnly = (el: Element): boolean =>
+    el.localName === 'p' &&
+    !(el.textContent || '').trim() &&
+    el.getElementsByTagNameNS(W_NS, 'br').length > 0 &&
+    el.getElementsByTagNameNS(W_NS, 'drawing').length === 0;
+
+  const findPhaseRange = (
+    children: Element[],
+    phaseKey: 'physical' | 'pre_measure' | 'cleaning' | 'post_measure'
+  ): [number, number] | null => {
+    const startMarkers: Record<typeof phaseKey, string> = {
+      physical: 'II.I. PENGECEKAN KONDISI INSTALASI',
+      pre_measure: 'II.II. PENGUKURAN PRA PEMBERSIHAN',
+      cleaning: 'II.III. PEMBERSIHAN',
+      post_measure: 'II.IV. PENGUKURAN PASCA PEMBERSIHAN',
+    };
+    const startIdx = children.findIndex(
+      (el) => el.localName === 'tbl' && (el.textContent || '').includes(startMarkers[phaseKey])
+    );
+    if (startIdx === -1) return null;
+
+    if (phaseKey === 'physical') {
+      for (let i = startIdx + 1; i < children.length; i++) {
+        const txt = children[i].textContent || '';
+        if (
+          children[i].localName === 'tbl' &&
+          txt.includes('ITEM') &&
+          txt.includes('DESKRIPSI') &&
+          txt.includes('KETERANGAN')
+        ) {
+          return [startIdx, i];
+        }
+      }
+      return null;
+    }
+
+    if (phaseKey === 'pre_measure' || phaseKey === 'post_measure') {
+      let seenHeading = false;
+      for (let i = startIdx + 1; i < children.length; i++) {
+        const txt = (children[i].textContent || '').trim();
+        if (children[i].localName === 'p' && txt === 'TABEL HASIL PENGUKURAN') {
+          seenHeading = true;
+          continue;
+        }
+        if (seenHeading && children[i].localName === 'tbl') {
+          return [startIdx, i];
+        }
+        if (txt.includes('III. ANALISA PERFORMA')) break;
+      }
+      return null;
+    }
+
+    // cleaning: ends at the last table before II.IV or III. ANALISA PERFORMA
+    let lastTblIdx = startIdx;
+    for (let i = startIdx + 1; i < children.length; i++) {
+      const txt = children[i].textContent || '';
+      if (
+        (children[i].localName === 'tbl' && txt.includes('II.IV. PENGUKURAN PASCA PEMBERSIHAN')) ||
+        (children[i].localName === 'p' && txt.includes('III. ANALISA PERFORMA'))
+      ) {
+        break;
+      }
+      if (children[i].localName === 'tbl') {
+        lastTblIdx = i;
+      }
+    }
+    return [startIdx, lastTblIdx];
+  };
+
+  for (const phaseKey of targetPhases) {
+    const children = Array.from(body.children);
+    const range = findPhaseRange(children, phaseKey);
+    if (!range) continue;
+
+    let [startIdx, endIdx] = range;
+    // Trim blank spacer paragraphs immediately before the removed section
+    while (startIdx > 0 && isBlankSpacer(children[startIdx - 1])) {
+      startIdx--;
+    }
+    // Avoid double page break when both cleaning and post_measure are removed
+    if (
+      phaseKey === 'cleaning' &&
+      hidden.has('post_measure') &&
+      startIdx > 0 &&
+      isPageBreakOnly(children[startIdx - 1])
+    ) {
+      startIdx--;
+    }
+
+    for (let i = startIdx; i <= endIdx; i++) {
+      body.removeChild(children[i]);
+    }
+  }
+
+  // Remove II. PELAKSANAAN PEKERJAAN heading if all 4 execution phases were removed
+  if (targetPhases.length === 4) {
+    const children = Array.from(body.children);
+    const iiIdx = children.findIndex(
+      (el) => el.localName === 'p' && (el.textContent || '').trim() === 'II. PELAKSANAAN PEKERJAAN'
+    );
+    if (iiIdx !== -1) {
+      body.removeChild(children[iiIdx]);
+    }
   }
 }
 
@@ -1447,13 +1635,15 @@ export async function exportReportToDocx(
   const xmlDoc = parser.parseFromString(xmlStr, 'application/xml');
   const tables = xmlDoc.getElementsByTagNameNS(W_NS, 'tbl');
 
+  const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
+
   updateCoverAndLocationTables(tables, state);
   updateRealizationDatesTable(tables, state);
   updatePhotoCaptionsAndDates(tables, state);
-  updateChecklistTable(tables, state);
+  if (!hiddenPhases.has('physical')) updateChecklistTable(tables, state);
 
-  if (tables.length > 25) updateMeasurementTable(tables[25], state, false);
-  if (tables.length > 52) updateMeasurementTable(tables[52], state, true);
+  if (!hiddenPhases.has('pre_measure') && tables.length > 25) updateMeasurementTable(tables[25], state, false);
+  if (!hiddenPhases.has('post_measure') && tables.length > 52) updateMeasurementTable(tables[52], state, true);
 
   updateComparisonTables(tables, state);
   updateSTCTables(tables, state);
@@ -1461,6 +1651,7 @@ export async function exportReportToDocx(
   updateDynamicParagraphs(xmlDoc, state);
 
   await injectCustomPhotos(zip, tables, state, plBytes);
+  removeHiddenPhaseSections(xmlDoc, state);
   cleanPhotoTableCells(xmlDoc.getElementsByTagNameNS(W_NS, 'tbl'));
 
   onProgress?.('Mengompilasi berkas DOCX...');

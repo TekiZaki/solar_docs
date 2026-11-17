@@ -439,7 +439,7 @@ export const DEFAULT_MEASUREMENTS: ElectricalMeasurement[] = [
   { id: 'ac_v_rn', no: '2.1', parameter: 'Tegangan Fasa R - Netral [Vac]', hasilBefore: '', hasilAfter: '' },
   { id: 'ac_v_sn', no: '2.2', parameter: 'Tegangan Fasa S - Netral [Vac]', hasilBefore: '', hasilAfter: '' },
   { id: 'ac_v_tn', no: '2.3', parameter: 'Tegangan Fasa T - Netral [Vac]', hasilBefore: '', hasilAfter: '' },
-  { id: 'ac_v_ng', no: '2.4', parameter: 'Tegangan Fasa Netral - Grounding [Vac]', hasilBefore: '', hasilAfter: '' },
+  { id: 'ac_v_ng', no: '2.4', parameter: 'Tegangan Netral - Grounding [Vac]', hasilBefore: '', hasilAfter: '' },
   { id: 'ac_v_rs', no: '2.5', parameter: 'Tegangan Fasa R - S [Vac]', hasilBefore: '', hasilAfter: '' },
   { id: 'ac_v_rt', no: '2.6', parameter: 'Tegangan Fasa R - T [Vac]', hasilBefore: '', hasilAfter: '' },
   { id: 'ac_v_st', no: '2.7', parameter: 'Tegangan Fasa S - T [Vac]', hasilBefore: '', hasilAfter: '' },

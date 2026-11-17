@@ -23,7 +23,7 @@
     "phaseKey": "physical",
     "mediaTarget": "media/image11.png",
     "rId": "rId19",
-    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Tampak Luar)",
     "defaultDate": "Sabtu, 05 September 2026"
   },
   {
@@ -32,7 +32,7 @@
     "phaseKey": "physical",
     "mediaTarget": "media/image12.png",
     "rId": "rId20",
-    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Tampak Dalam)",
     "defaultDate": "Sabtu, 05 September 2026"
   },
   {
@@ -41,7 +41,7 @@
     "phaseKey": "physical",
     "mediaTarget": "media/image13.jpeg",
     "rId": "rId21",
-    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Tampak Luar)",
     "defaultDate": "Sabtu, 05 September 2026"
   },
   {
@@ -50,7 +50,7 @@
     "phaseKey": "physical",
     "mediaTarget": "media/image14.jpeg",
     "rId": "rId22",
-    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Tampak Dalam)",
     "defaultDate": "Sabtu, 05 September 2026"
   },
   {
@@ -549,7 +549,7 @@
     "phaseKey": "post_measure",
     "mediaTarget": "media/image60.png",
     "rId": "rId68",
-    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Tampak Luar)",
     "defaultDate": "Minggu, 06 September 2026"
   },
   {
@@ -558,7 +558,7 @@
     "phaseKey": "post_measure",
     "mediaTarget": "media/image61.jpeg",
     "rId": "rId69",
-    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultCaption": "Kondisi Panel DC Combiner Box saat tiba di lokasi (Tampak Dalam)",
     "defaultDate": "Minggu, 06 September 2026"
   },
   {
@@ -567,7 +567,7 @@
     "phaseKey": "post_measure",
     "mediaTarget": "media/image62.jpeg",
     "rId": "rId70",
-    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Tertutup)",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Tampak Luar)",
     "defaultDate": "Minggu, 06 September 2026"
   },
   {
@@ -576,7 +576,7 @@
     "phaseKey": "post_measure",
     "mediaTarget": "media/image63.jpeg",
     "rId": "rId71",
-    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Posisi Terbuka)",
+    "defaultCaption": "Kondisi Panel AC Combiner Box saat tiba di lokasi (Tampak Dalam)",
     "defaultDate": "Minggu, 06 September 2026"
   },
   {

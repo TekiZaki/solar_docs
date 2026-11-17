@@ -12,6 +12,7 @@ import { useReport } from '../../context/useReport';
 import { PhotoCard } from '../common/PhotoCard';
 import { RealizationDateCard } from '../common/RealizationDateCard';
 import { PhaseDateBar } from '../common/PhaseDateBar';
+import { PhaseHideBanner, PhaseHideToggleButton } from '../common/PhaseHideBanner';
 
 export const PhaseCleaning: React.FC = () => {
   const { state, updateRealizationDate, addPhotoSlot } = useReport();
@@ -37,17 +38,22 @@ export const PhaseCleaning: React.FC = () => {
   return (
     <div className="space-y-6 text-left">
       {/* Header */}
-      <div className="border-b border-black pb-3">
-        <div className="inline-block text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 mb-1">
-          Tahap II.III
+      <div className="border-b border-black pb-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+        <div>
+          <div className="inline-block text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 mb-1">
+            Tahap II.III
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900">
+            II.III. PEMBERSIHAN
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Dokumentasi proses pembersihan modul surya, pengecekan temperatur termal (pra & pasca cuci), dan kondisi modul.
+          </p>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">
-          II.III. PEMBERSIHAN
-        </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Dokumentasi proses pembersihan modul surya, pengecekan temperatur termal (pra & pasca cuci), dan kondisi modul.
-        </p>
+        <PhaseHideToggleButton phaseKey="cleaning" phaseLabel="II.III. Pembersihan" />
       </div>
+
+      <PhaseHideBanner phaseKey="cleaning" phaseLabel="II.III. Pembersihan" />
 
       {/* Tanggal & Cuaca Realisasi: 2. Pembersihan Panel Surya */}
       {cleaningDate && (

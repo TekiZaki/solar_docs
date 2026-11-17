@@ -12,6 +12,7 @@ import { useReport } from '../../context/useReport';
 import { PhotoCard } from '../common/PhotoCard';
 import { RealizationDateCard } from '../common/RealizationDateCard';
 import { PhaseDateBar } from '../common/PhaseDateBar';
+import { PhaseHideBanner, PhaseHideToggleButton } from '../common/PhaseHideBanner';
 import { MeasurementInfoGuide } from '../common/MeasurementInfoGuide';
 import { MeasurementTable } from '../common/MeasurementTable';
 
@@ -39,17 +40,22 @@ export const PhasePostMeasure: React.FC = () => {
   return (
     <div className="space-y-6 text-left">
       {/* Header */}
-      <div className="border-b border-black pb-3">
-        <div className="inline-block text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 mb-1">
-          Tahap II.IV
+      <div className="border-b border-black pb-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+        <div>
+          <div className="inline-block text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 mb-1">
+            Tahap II.IV
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900">
+            II.IV. PENGUKURAN PASCA PEMBERSIHAN
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Pengukuran parameter kelistrikan DC, AC, dan grounding setelah seluruh modul PV dibersihkan.
+          </p>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">
-          II.IV. PENGUKURAN PASCA PEMBERSIHAN
-        </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Pengukuran parameter kelistrikan DC, AC, dan grounding setelah seluruh modul PV dibersihkan.
-        </p>
+        <PhaseHideToggleButton phaseKey="post_measure" phaseLabel="II.IV. Pengukuran Pasca Pembersihan" />
       </div>
+
+      <PhaseHideBanner phaseKey="post_measure" phaseLabel="II.IV. Pengukuran Pasca Pembersihan" />
 
       {/* Tanggal & Cuaca Realisasi: 3. Pengecekan & Pengukuran Pasca Pembersihan */}
       {pascaDate && (

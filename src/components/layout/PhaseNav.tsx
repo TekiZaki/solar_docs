@@ -39,7 +39,9 @@ export const PhaseNav: React.FC<PhaseNavProps> = ({ currentTab, onSelectTab }) =
   const clnStats = getPhasePhotoCount('cleaning');
   const postStats = getPhasePhotoCount('post_measure');
 
-  const tabs: { id: PhaseTab; label: string; sub: string; badge?: string }[] = [
+  const hiddenSet = new Set<string>(state.hiddenPhases ?? []);
+
+  const allTabs: { id: PhaseTab; label: string; sub: string; badge?: string }[] = [
     {
       id: 'general',
       label: 'Lokasi & Jadwal',
@@ -81,6 +83,8 @@ export const PhaseNav: React.FC<PhaseNavProps> = ({ currentTab, onSelectTab }) =
       sub: 'Kesimpulan & Rekomendasi',
     },
   ];
+
+  const tabs = allTabs.filter((tab) => !hiddenSet.has(tab.id) || tab.id === currentTab);
 
   return (
     <div className="bg-white border-b border-black">

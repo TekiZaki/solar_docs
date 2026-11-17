@@ -131,10 +131,13 @@ export async function injectCustomPhotos(
   state: MaintenanceReportState,
   plBytes: Uint8Array
 ): Promise<void> {
+  const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
   const customSlots = Object.values(state.photoSlots).filter(
-    (s) => s.isCustom && !s.excludeFromDocx
+    (s) => s.isCustom && !s.excludeFromDocx && !hiddenPhases.has(s.phaseKey)
   );
-  const hasAnyExclusion = Object.values(state.photoSlots).some((s) => s.excludeFromDocx);
+  const hasAnyExclusion = Object.values(state.photoSlots).some(
+    (s) => s.excludeFromDocx && !hiddenPhases.has(s.phaseKey)
+  );
   if (customSlots.length === 0 && !hasAnyExclusion) return;
 
   if (customSlots.length > 0) {
@@ -157,6 +160,7 @@ export async function injectCustomPhotos(
   const docOrder = Array.from(tables);
 
   for (const phaseKey of phases) {
+    if (hiddenPhases.has(phaseKey)) continue;
     const phaseSlots = Object.values(state.photoSlots).filter((s) => s.phaseKey === phaseKey);
     // Untouched phases keep byte-identical template pairing
     if (!phaseSlots.some((s) => s.isCustom || s.excludeFromDocx)) continue;

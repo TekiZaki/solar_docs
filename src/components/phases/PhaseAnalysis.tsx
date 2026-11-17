@@ -27,6 +27,10 @@ export const PhaseAnalysis: React.FC = () => {
     setHideFieldComparisonTable,
   } = useReport();
 
+  const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
+  const isPreHidden = hiddenPhases.has('pre_measure');
+  const isPostHidden = hiddenPhases.has('post_measure');
+
   const dcItems = state.measurements.filter((m) => m.id.startsWith('dc_'));
   const displayedDcItems = dcItems;
   const acItems = state.measurements.filter((m) => m.id.startsWith('ac_') || m.id.startsWith('ground_'));
@@ -35,24 +39,30 @@ export const PhaseAnalysis: React.FC = () => {
 
   const handleAutoFillSTC = () => {
     state.stcStrings.forEach((str, sIdx) => {
-      const vocMeas = state.measurements.find((m) => m.id === `dc_voc_${sIdx * 2 + 1}`)?.hasilAfter || '';
-      const vmpMeas = state.measurements.find((m) => m.id === `dc_vmp_${sIdx + 1}`)?.hasilAfter || '';
-      const impMeas = state.measurements.find((m) => m.id === `dc_imp_${sIdx + 1}`)?.hasilAfter || '';
+      const vocMeas = isPostHidden
+        ? '-'
+        : state.measurements.find((m) => m.id === `dc_voc_${sIdx * 2 + 1}`)?.hasilAfter || '';
+      const vmpMeas = isPostHidden
+        ? '-'
+        : state.measurements.find((m) => m.id === `dc_vmp_${sIdx + 1}`)?.hasilAfter || '';
+      const impMeas = isPostHidden
+        ? '-'
+        : state.measurements.find((m) => m.id === `dc_imp_${sIdx + 1}`)?.hasilAfter || '';
 
       updateSTCRow(sIdx, 0, {
         stc: str.rows[0].stc || formatIndoNumber(analysis.vocSTC, 0),
-        meas: str.rows[0].meas || vocMeas,
+        meas: isPostHidden ? '-' : str.rows[0].meas || vocMeas,
       });
       updateSTCRow(sIdx, 1, {
         stc: str.rows[1].stc || formatIndoNumber(analysis.vmpSTC, 0),
-        meas: str.rows[1].meas || vmpMeas,
+        meas: isPostHidden ? '-' : str.rows[1].meas || vmpMeas,
       });
       updateSTCRow(sIdx, 2, {
         stc: str.rows[2].stc || (analysis.iscSTC ? formatIndoNumber(analysis.iscSTC, 1) : ''),
       });
       updateSTCRow(sIdx, 3, {
         stc: str.rows[3].stc || (analysis.impSTC ? formatIndoNumber(analysis.impSTC, 1) : ''),
-        meas: str.rows[3].meas || impMeas,
+        meas: isPostHidden ? '-' : str.rows[3].meas || impMeas,
       });
     });
   };
@@ -139,18 +149,26 @@ export const PhaseAnalysis: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className={`py-2 px-3 font-mono font-medium ${isExcluded ? 'text-slate-400 bg-slate-100' : 'text-slate-700 bg-slate-50/50'}`}>
-                      {m.hasilBefore || (
-                        <span className="text-slate-400 italic">
-                          ({EXAMPLE_MEASUREMENTS[m.id]?.before || '-'})
-                        </span>
+                    <td className={`py-2 px-3 font-mono font-medium ${isExcluded || isPreHidden ? 'text-slate-400 bg-slate-100' : 'text-slate-700 bg-slate-50/50'}`}>
+                      {isPreHidden ? (
+                        '-'
+                      ) : (
+                        m.hasilBefore || (
+                          <span className="text-slate-400 italic">
+                            ({EXAMPLE_MEASUREMENTS[m.id]?.before || '-'})
+                          </span>
+                        )
                       )}
                     </td>
-                    <td className={`py-2 px-3 font-mono font-semibold ${isExcluded ? 'text-slate-400 bg-slate-100' : 'text-emerald-700 bg-emerald-50/30'}`}>
-                      {m.hasilAfter || (
-                        <span className="text-slate-400 font-normal italic">
-                          ({EXAMPLE_MEASUREMENTS[m.id]?.after || '-'})
-                        </span>
+                    <td className={`py-2 px-3 font-mono font-semibold ${isExcluded || isPostHidden ? 'text-slate-400 bg-slate-100' : 'text-emerald-700 bg-emerald-50/30'}`}>
+                      {isPostHidden ? (
+                        '-'
+                      ) : (
+                        m.hasilAfter || (
+                          <span className="text-slate-400 font-normal italic">
+                            ({EXAMPLE_MEASUREMENTS[m.id]?.after || '-'})
+                          </span>
+                        )
                       )}
                     </td>
                     <td className="py-1.5 px-3 font-mono text-slate-500 bg-slate-50/30">
@@ -189,18 +207,26 @@ export const PhaseAnalysis: React.FC = () => {
                   <tr key={m.id} className="hover:bg-slate-50/50">
                     <td className="py-2 px-3 font-mono text-slate-500">{m.no}</td>
                     <td className="py-2 px-3 text-slate-800">{m.parameter}</td>
-                    <td className="py-2 px-3 font-mono font-medium text-slate-700 bg-slate-50/50">
-                      {m.hasilBefore || (
-                        <span className="text-slate-400 italic">
-                          ({EXAMPLE_MEASUREMENTS[m.id]?.before || '-'})
-                        </span>
+                    <td className={`py-2 px-3 font-mono font-medium ${isPreHidden ? 'text-slate-400 bg-slate-100' : 'text-slate-700 bg-slate-50/50'}`}>
+                      {isPreHidden ? (
+                        '-'
+                      ) : (
+                        m.hasilBefore || (
+                          <span className="text-slate-400 italic">
+                            ({EXAMPLE_MEASUREMENTS[m.id]?.before || '-'})
+                          </span>
+                        )
                       )}
                     </td>
-                    <td className="py-2 px-3 font-mono font-semibold text-emerald-700 bg-emerald-50/30">
-                      {m.hasilAfter || (
-                        <span className="text-slate-400 font-normal italic">
-                          ({EXAMPLE_MEASUREMENTS[m.id]?.after || '-'})
-                        </span>
+                    <td className={`py-2 px-3 font-mono font-semibold ${isPostHidden ? 'text-slate-400 bg-slate-100' : 'text-emerald-700 bg-emerald-50/30'}`}>
+                      {isPostHidden ? (
+                        '-'
+                      ) : (
+                        m.hasilAfter || (
+                          <span className="text-slate-400 font-normal italic">
+                            ({EXAMPLE_MEASUREMENTS[m.id]?.after || '-'})
+                          </span>
+                        )
                       )}
                     </td>
                     <td className="py-2 px-3 font-mono text-slate-500 bg-slate-50/30">
@@ -284,19 +310,27 @@ export const PhaseAnalysis: React.FC = () => {
                             />
                           </td>
                           <td className="py-1.5 px-3">
-                            <input
-                              type="text"
-                              value={row.meas}
-                              onChange={(e) => updateSTCRow(sIdx, rIdx, { meas: e.target.value })}
-                              placeholder={exRow?.meas || ''}
-                              className="w-full text-xs font-mono px-2 py-1 rounded border border-gray-400 bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
-                            />
+                            {isPostHidden ? (
+                              <span className="text-xs font-mono text-slate-400">-</span>
+                            ) : (
+                              <input
+                                type="text"
+                                value={row.meas}
+                                onChange={(e) => updateSTCRow(sIdx, rIdx, { meas: e.target.value })}
+                                placeholder={exRow?.meas || ''}
+                                className="w-full text-xs font-mono px-2 py-1 rounded border border-gray-400 bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
+                              />
+                            )}
                           </td>
                           <td className="py-2 px-3 font-mono font-bold text-purple-900 bg-purple-50/30">
-                            {row.hasilAnalisa || (
-                              <span className="text-slate-400 font-normal italic">
-                                ({exRow?.hasilAnalisa || '-'})
-                              </span>
+                            {isPostHidden ? (
+                              <span className="text-slate-400 font-normal">-</span>
+                            ) : (
+                              row.hasilAnalisa || (
+                                <span className="text-slate-400 font-normal italic">
+                                  ({exRow?.hasilAnalisa || '-'})
+                                </span>
+                              )
                             )}
                           </td>
                         </tr>
@@ -542,11 +576,19 @@ export const PhaseAnalysis: React.FC = () => {
               {analysis.strings.map((s) => (
                 <tr key={s.name} className="hover:bg-slate-50/50">
                   <td className="py-2 px-3 font-semibold text-slate-800">{s.name}</td>
-                  <td className="py-2 px-3 font-mono font-medium text-slate-700">{s.voc} V</td>
-                  <td className="py-2 px-3 font-mono text-slate-600">{s.irr} W/m²</td>
-                  <td className="py-2 px-3 font-mono font-semibold text-slate-800">{s.vmp} V</td>
+                  <td className="py-2 px-3 font-mono font-medium text-slate-700">
+                    {analysis.hasFieldMeasurementData ? `${s.voc} V` : '-'}
+                  </td>
+                  <td className="py-2 px-3 font-mono text-slate-600">
+                    {analysis.hasFieldMeasurementData ? `${s.irr} W/m²` : '-'}
+                  </td>
+                  <td className="py-2 px-3 font-mono font-semibold text-slate-800">
+                    {analysis.hasFieldMeasurementData ? `${s.vmp} V` : '-'}
+                  </td>
                   <td className="py-2 px-3 font-mono font-bold text-rose-700 bg-rose-50/30">
-                    {s.deviasiVmp < 0 ? '−' : ''}{formatIndoNumber(Math.abs(s.deviasiVmp), 2)}%
+                    {analysis.hasFieldMeasurementData
+                      ? `${s.deviasiVmp < 0 ? '−' : ''}${formatIndoNumber(Math.abs(s.deviasiVmp), 2)}%`
+                      : '-'}
                   </td>
                 </tr>
               ))}
@@ -576,15 +618,27 @@ export const PhaseAnalysis: React.FC = () => {
                 <div key={s.name} className="flex justify-between items-center py-0.5 border-b border-slate-100">
                   <span className="font-medium text-slate-800">{s.name}:</span>
                   <span className="font-mono">
-                    {s.voc} V <span className="text-slate-400">({s.deviasiVoc < 0 ? '−' : ''}{formatIndoNumber(Math.abs(s.deviasiVoc), 2)}% STC)</span>
+                    {analysis.hasFieldMeasurementData ? (
+                      <>
+                        {s.voc} V <span className="text-slate-400">({s.deviasiVoc < 0 ? '−' : ''}{formatIndoNumber(Math.abs(s.deviasiVoc), 2)}% STC)</span>
+                      </>
+                    ) : (
+                      '-'
+                    )}
                   </span>
                 </div>
               ))}
             </div>
             <div className="pt-2 text-slate-600 leading-relaxed border-t border-slate-200">
-              <span className="font-semibold text-slate-800">Rentang Voc:</span> {analysis.minVoc}–{analysis.maxVoc} Vdc ({formatIndoNumber(analysis.minVocPct, 1)}%–{formatIndoNumber(analysis.maxVocPct, 1)}% STC).
+              <span className="font-semibold text-slate-800">Rentang Voc:</span>{' '}
+              {analysis.hasFieldMeasurementData
+                ? `${analysis.minVoc}–${analysis.maxVoc} Vdc (${formatIndoNumber(analysis.minVocPct, 1)}%–${formatIndoNumber(analysis.maxVocPct, 1)}% STC).`
+                : '-'}
               <br />
-              <span className="font-semibold text-slate-800">Keseragaman:</span> Selisih maksimum Voc hanya {analysis.deltaVoc} V pada selisih radiasi {analysis.deltaIrr} W/m², menunjukkan tidak ada rangkaian modul yang terputus / open circuit.
+              <span className="font-semibold text-slate-800">Keseragaman:</span>{' '}
+              {analysis.hasFieldMeasurementData
+                ? `Selisih maksimum Voc hanya ${analysis.deltaVoc} V pada selisih radiasi ${analysis.deltaIrr} W/m², menunjukkan tidak ada rangkaian modul yang terputus / open circuit.`
+                : '-'}
             </div>
           </div>
 
@@ -601,15 +655,25 @@ export const PhaseAnalysis: React.FC = () => {
                 <div key={s.name} className="flex justify-between items-center py-0.5 border-b border-slate-100">
                   <span className="font-medium text-slate-800">{s.name}:</span>
                   <span className="font-mono">
-                    {s.vmp} V <span className="text-slate-400">({s.deviasiVmp < 0 ? '−' : ''}{formatIndoNumber(Math.abs(s.deviasiVmp), 2)}% STC)</span>
+                    {analysis.hasFieldMeasurementData ? (
+                      <>
+                        {s.vmp} V <span className="text-slate-400">({s.deviasiVmp < 0 ? '−' : ''}{formatIndoNumber(Math.abs(s.deviasiVmp), 2)}% STC)</span>
+                      </>
+                    ) : (
+                      '-'
+                    )}
                   </span>
                 </div>
               ))}
             </div>
             <div className="pt-2 text-slate-600 leading-relaxed border-t border-slate-200">
-              <span className="font-semibold text-slate-800">Rentang Vmp:</span> {analysis.minVmp}–{analysis.maxVmp} Vdc.
+              <span className="font-semibold text-slate-800">Rentang Vmp:</span>{' '}
+              {analysis.hasFieldMeasurementData ? `${analysis.minVmp}–${analysis.maxVmp} Vdc.` : '-'}
               <br />
-              <span className="font-semibold text-slate-800">Fokus Monitoring:</span> {analysis.outlierString.name} memiliki Vmp ({analysis.outlierString.vmp} V) yang lebih rendah dibandingkan string lainnya, sehingga direkomendasikan untuk pemantauan berkala.
+              <span className="font-semibold text-slate-800">Fokus Monitoring:</span>{' '}
+              {analysis.hasFieldMeasurementData
+                ? `${analysis.outlierString.name} memiliki Vmp (${analysis.outlierString.vmp} V) yang lebih rendah dibandingkan string lainnya, sehingga direkomendasikan untuk pemantauan berkala.`
+                : '-'}
             </div>
           </div>
         </div>
@@ -633,10 +697,14 @@ export const PhaseAnalysis: React.FC = () => {
                 {analysis.strings.map((s) => (
                   <tr key={s.name} className="hover:bg-slate-50/50">
                     <td className="py-2 px-3 font-medium text-slate-800">{s.name}</td>
-                    <td className="py-2 px-3 font-mono text-slate-700">{s.voc} V</td>
-                    <td className="py-2 px-3 font-mono text-slate-700">{s.vmp} V</td>
+                    <td className="py-2 px-3 font-mono text-slate-700">
+                      {analysis.hasFieldMeasurementData ? `${s.voc} V` : '-'}
+                    </td>
+                    <td className="py-2 px-3 font-mono text-slate-700">
+                      {analysis.hasFieldMeasurementData ? `${s.vmp} V` : '-'}
+                    </td>
                     <td className="py-2 px-3 font-mono font-bold text-blue-700 bg-blue-50/20">
-                      {formatIndoNumber(s.rasioVmpVoc, 2)}%
+                      {analysis.hasFieldMeasurementData ? `${formatIndoNumber(s.rasioVmpVoc, 2)}%` : '-'}
                     </td>
                   </tr>
                 ))}
@@ -650,26 +718,32 @@ export const PhaseAnalysis: React.FC = () => {
           <h4 className="font-semibold text-sm text-purple-900">
             3. Kesimpulan Performa PV Module
           </h4>
-          <ul className="space-y-1.5 list-disc list-inside text-slate-700 leading-relaxed">
-            <li>
-              <strong>a. Kondisi Voc antar-string sangat seragam:</strong> Selisih maksimum hanya {analysis.deltaVoc} V menunjukkan kontinuitas rangkaian seri konsisten.
-            </li>
-            <li>
-              <strong>b. Tidak terdapat indikasi kehilangan modul seri:</strong> Tidak ditemukan drop tegangan sebesar 1 modul ({formatIndoNumber(analysis.openCircuitVoltageVoc, 1)} V).
-            </li>
-            <li>
-              <strong>c. String berimbang:</strong> {analysis.balancedStrings.map((s) => s.name).join(' dan ')} menunjukkan karakteristik tegangan kerja yang seimbang.
-            </li>
-            <li>
-              <strong>d. String {analysis.outlierString.name} menunjukkan Vmp relatif lebih rendah:</strong> Perlu perhatian lebih lanjut untuk trending dan pengecekan koneksi/shading.
-            </li>
-            <li>
-              <strong>e. Nilai irradiance sebagai interpretasi hasil:</strong> Radiasi aktual ({analysis.minIrr}–{analysis.maxIrr} W/m²) jauh di bawah STC 1.000 W/m² sehingga penurunan tegangan dan arus wajar.
-            </li>
-            <li>
-              <strong>f. Hasil Imp seimbang:</strong> Nilai arus string relatif berimbang dan tidak menunjukkan deviasi arus yang ekstrem.
-            </li>
-          </ul>
+          {!analysis.hasFieldMeasurementData ? (
+            <p className="text-slate-600 italic">
+              Tahap II.IV (Pengukuran Pasca Pembersihan) dihilangkan sehingga analisa data lapangan dan kesimpulan performa pasca pembersihan diganti &quot;-&quot;.
+            </p>
+          ) : (
+            <ul className="space-y-1.5 list-disc list-inside text-slate-700 leading-relaxed">
+              <li>
+                <strong>a. Kondisi Voc antar-string sangat seragam:</strong> Selisih maksimum hanya {analysis.deltaVoc} V menunjukkan kontinuitas rangkaian seri konsisten.
+              </li>
+              <li>
+                <strong>b. Tidak terdapat indikasi kehilangan modul seri:</strong> Tidak ditemukan drop tegangan sebesar 1 modul ({formatIndoNumber(analysis.openCircuitVoltageVoc, 1)} V).
+              </li>
+              <li>
+                <strong>c. String berimbang:</strong> {analysis.balancedStrings.map((s) => s.name).join(' dan ')} menunjukkan karakteristik tegangan kerja yang seimbang.
+              </li>
+              <li>
+                <strong>d. String {analysis.outlierString.name} menunjukkan Vmp relatif lebih rendah:</strong> Perlu perhatian lebih lanjut untuk trending dan pengecekan koneksi/shading.
+              </li>
+              <li>
+                <strong>e. Nilai irradiance sebagai interpretasi hasil:</strong> Radiasi aktual ({analysis.minIrr}–{analysis.maxIrr} W/m²) jauh di bawah STC 1.000 W/m² sehingga penurunan tegangan dan arus wajar.
+              </li>
+              <li>
+                <strong>f. Hasil Imp seimbang:</strong> Nilai arus string relatif berimbang dan tidak menunjukkan deviasi arus yang ekstrem.
+              </li>
+            </ul>
+          )}
         </div>
       </div>
     </div>

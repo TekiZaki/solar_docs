@@ -123,6 +123,14 @@ export interface RecommendationItem {
   rekomendasi: string;
 }
 
+export type MaintenancePhaseKey =
+  | 'physical'
+  | 'pre_measure'
+  | 'cleaning'
+  | 'post_measure'
+  | 'analysis'
+  | 'damage_rec';
+
 export interface MaintenanceReportState {
   location: LocationInfo;
   realizationDates: RealizationDate[];
@@ -143,5 +151,6 @@ export interface MaintenanceReportState {
   analysisNarrative?: AnalysisNarrative;
   hidePVAnalisis?: boolean;
   hideFieldComparisonTable?: boolean;
+  hiddenPhases?: MaintenancePhaseKey[];
   customFileName?: string;
 }

@@ -34,8 +34,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
 
   if (!isOpen) return null;
 
-  const totalSlots = Object.keys(state.photoSlots).length;
-  const uploadedCount = Object.values(state.photoSlots).filter((s) => s.isUploaded).length;
+  const hiddenSet = new Set<string>(state.hiddenPhases ?? []);
+  const activeSlots = Object.values(state.photoSlots).filter((s) => !hiddenSet.has(s.phaseKey));
+  const totalSlots = activeSlots.length;
+  const uploadedCount = activeSlots.filter((s) => s.isUploaded).length;
   const emptySlotsCount = totalSlots - uploadedCount;
 
   const handleExport = async () => {

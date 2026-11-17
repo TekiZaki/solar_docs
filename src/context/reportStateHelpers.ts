@@ -7,7 +7,7 @@
 // - Notes: Extracted from ReportContext.tsx so the provider stays focused on orchestration
 // ---
 
-import type { ElectricalMeasurement, MaintenanceReportState, PhotoSlot } from '../types/schema';
+import type { ElectricalMeasurement, MaintenancePhaseKey, MaintenanceReportState, PhotoSlot } from '../types/schema';
 import {
   DEFAULT_LOCATION, DEFAULT_REALIZATION_DATES, DEFAULT_CHECKLIST,
   DEFAULT_MEASUREMENTS, DEFAULT_DATASHEET, DEFAULT_STC_STRINGS,
@@ -42,6 +42,7 @@ export function createDefaultState(): MaintenanceReportState {
     technicalRecommendations: [],
     hidePVAnalisis: false,
     hideFieldComparisonTable: false,
+    hiddenPhases: [],
     customFileName: `${DEFAULT_REPORT_ID}.docx`,
   };
 }
@@ -94,6 +95,9 @@ export function mergeStateWithSlots(parsed: Partial<MaintenanceReportState> & { 
     analysisNarrative: parsed.analysisNarrative,
     hidePVAnalisis: Boolean(parsed.hidePVAnalisis),
     hideFieldComparisonTable: Boolean(parsed.hideFieldComparisonTable),
+    hiddenPhases: Array.isArray(parsed.hiddenPhases)
+      ? (parsed.hiddenPhases.filter((p): p is MaintenancePhaseKey => typeof p === 'string'))
+      : [],
     customFileName,
   };
 }

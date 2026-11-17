@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type {
-  MaintenanceReportState, LocationInfo, RealizationDate, PhotoSlot,
+  MaintenancePhaseKey, MaintenanceReportState, LocationInfo, RealizationDate, PhotoSlot,
   ChecklistItem, ElectricalMeasurement, PVDatasheet, STCDataRow,
   DamageItem, TechnicalRecommendationItem, RecommendationItem,
 } from '../types/schema';
@@ -361,6 +361,16 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     applyUpdate((prev) => ({ ...prev, hideFieldComparisonTable: hide }));
   };
 
+  const setPhaseHidden = (phase: MaintenancePhaseKey, hidden: boolean) => {
+    applyUpdate((prev) => {
+      const current = prev.hiddenPhases ?? [];
+      const next = hidden
+        ? Array.from(new Set([...current, phase]))
+        : current.filter((p) => p !== phase);
+      return { ...prev, hiddenPhases: next };
+    });
+  };
+
   const setCustomFileName = (fileName: string) => {
     applyUpdate((prev) => ({ ...prev, customFileName: fileName }));
   };
@@ -467,6 +477,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteRecommendation,
         setHidePVAnalisis,
         setHideFieldComparisonTable,
+        setPhaseHidden,
         setCustomFileName,
         addPhotoSlot,
         movePhotoSlot,

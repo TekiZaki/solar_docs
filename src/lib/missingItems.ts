@@ -31,9 +31,13 @@ export interface MissingReportSummary {
   formattedChatText: string;
 }
 
-function findMissingImages(photoSlots: Record<string, PhotoSlot>): MissingImageItem[] {
+function findMissingImages(
+  photoSlots: Record<string, PhotoSlot>,
+  hiddenPhases: Set<string>
+): MissingImageItem[] {
   const result: MissingImageItem[] = [];
   for (const slot of Object.values(photoSlots)) {
+    if (hiddenPhases.has(slot.phaseKey)) continue;
     // saved photos keep only imagePath (imageDataUrl is stripped on save), so check both
     const hasImage = slot.isUploaded && Boolean(slot.imagePath || slot.imageDataUrl);
     if (!hasImage) {
@@ -59,9 +63,20 @@ function findMissingLocation(state: MaintenanceReportState): MissingDataItem[] {
   return items;
 }
 
-function findMissingDates(state: MaintenanceReportState): MissingDataItem[] {
+function isDatePhaseHidden(phase: string, hiddenPhases: Set<string>): boolean {
+  if (phase === 'pra') return hiddenPhases.has('physical') && hiddenPhases.has('pre_measure');
+  if (phase === 'pembersihan') return hiddenPhases.has('cleaning');
+  if (phase === 'pasca') return hiddenPhases.has('post_measure');
+  return false;
+}
+
+function findMissingDates(
+  state: MaintenanceReportState,
+  hiddenPhases: Set<string>
+): MissingDataItem[] {
   const items: MissingDataItem[] = [];
   for (const r of state.realizationDates) {
+    if (isDatePhaseHidden(r.phase, hiddenPhases)) continue;
     if (!r.tanggalPelaksanaan.trim()) {
       items.push({ category: 'Jadwal Realisasi', label: `Tanggal Pelaksanaan (${r.label})` });
     }
@@ -72,20 +87,29 @@ function findMissingDates(state: MaintenanceReportState): MissingDataItem[] {
   return items;
 }
 
-function findMissingMeasurements(state: MaintenanceReportState): MissingDataItem[] {
+function findMissingMeasurements(
+  state: MaintenanceReportState,
+  hiddenPhases: Set<string>
+): MissingDataItem[] {
   const items: MissingDataItem[] = [];
+  const skipBefore = hiddenPhases.has('pre_measure');
+  const skipAfter = hiddenPhases.has('post_measure');
   for (const m of state.measurements) {
-    if (!m.hasilBefore.trim()) {
+    if (!skipBefore && !m.hasilBefore.trim()) {
       items.push({ category: 'Pengukuran Pra (Before)', label: `${m.parameter}` });
     }
-    if (!m.hasilAfter.trim()) {
+    if (!skipAfter && !m.hasilAfter.trim()) {
       items.push({ category: 'Pengukuran Pasca (After)', label: `${m.parameter}` });
     }
   }
   return items;
 }
 
-function findMissingChecklist(state: MaintenanceReportState): MissingDataItem[] {
+function findMissingChecklist(
+  state: MaintenanceReportState,
+  hiddenPhases: Set<string>
+): MissingDataItem[] {
+  if (hiddenPhases.has('physical')) return [];
   const items: MissingDataItem[] = [];
   for (const c of state.checklist) {
     if (NON_EDITABLE_CHECKLIST_IDS.has(c.id)) continue;
@@ -152,12 +176,13 @@ function buildChatText(
 }
 
 export function getMissingReportItems(state: MaintenanceReportState): MissingReportSummary {
-  const missingImages = findMissingImages(state.photoSlots);
+  const hiddenPhases = new Set<string>(state.hiddenPhases ?? []);
+  const missingImages = findMissingImages(state.photoSlots, hiddenPhases);
   const missingData = [
     ...findMissingLocation(state),
-    ...findMissingDates(state),
-    ...findMissingMeasurements(state),
-    ...findMissingChecklist(state),
+    ...findMissingDates(state, hiddenPhases),
+    ...findMissingMeasurements(state, hiddenPhases),
+    ...findMissingChecklist(state, hiddenPhases),
   ];
 
   const totalMissingImages = missingImages.length;

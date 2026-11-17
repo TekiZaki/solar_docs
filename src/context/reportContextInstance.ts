@@ -9,6 +9,7 @@
 
 import { createContext } from 'react';
 import type {
+  MaintenancePhaseKey,
   MaintenanceReportState,
   LocationInfo,
   RealizationDate,
@@ -96,6 +97,7 @@ export interface ReportContextType {
   deleteRecommendation: (id: string) => void;
   setHidePVAnalisis: (hide: boolean) => void;
   setHideFieldComparisonTable: (hide: boolean) => void;
+  setPhaseHidden: (phase: MaintenancePhaseKey, hidden: boolean) => void;
   setCustomFileName: (fileName: string) => void;
   addPhotoSlot: (
     phaseKey: PhotoSlot['phaseKey'],

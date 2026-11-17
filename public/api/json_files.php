@@ -151,8 +151,17 @@ function computeJsonProgress($decoded): array {
     $isReport = is_array($decoded) && isset($decoded['photoSlots']) && is_array($decoded['photoSlots']);
 
     if ($isReport) {
+        $hiddenPhases = [];
+        if (isset($decoded['hiddenPhases']) && is_array($decoded['hiddenPhases'])) {
+            foreach ($decoded['hiddenPhases'] as $hp) {
+                if (is_string($hp)) $hiddenPhases[$hp] = true;
+            }
+        }
+
         foreach ($decoded['photoSlots'] as $slot) {
             if (!is_array($slot)) continue;
+            $pk = isset($slot['phaseKey']) && is_string($slot['phaseKey']) ? $slot['phaseKey'] : '';
+            if ($pk !== '' && isset($hiddenPhases[$pk])) continue;
             $imagesTotal++;
             $hasImg = !empty($slot['isUploaded'])
                 || (!empty($slot['imagePath']) && is_string($slot['imagePath']) && trim($slot['imagePath']) !== '')
@@ -172,6 +181,10 @@ function computeJsonProgress($decoded): array {
         if (isset($decoded['realizationDates']) && is_array($decoded['realizationDates'])) {
             foreach ($decoded['realizationDates'] as $row) {
                 if (!is_array($row)) continue;
+                $rPhase = isset($row['phase']) && is_string($row['phase']) ? $row['phase'] : '';
+                if ($rPhase === 'pra' && isset($hiddenPhases['physical']) && isset($hiddenPhases['pre_measure'])) continue;
+                if ($rPhase === 'pembersihan' && isset($hiddenPhases['cleaning'])) continue;
+                if ($rPhase === 'pasca' && isset($hiddenPhases['post_measure'])) continue;
                 foreach (['tanggalPelaksanaan', 'kondisiCuaca'] as $field) {
                     $dataTotal++;
                     if (isset($row[$field]) && isFilledScalarValue($row[$field])) $dataFilled++;
@@ -179,7 +192,7 @@ function computeJsonProgress($decoded): array {
             }
         }
 
-        if (isset($decoded['checklist']) && is_array($decoded['checklist'])) {
+        if (!isset($hiddenPhases['physical']) && isset($decoded['checklist']) && is_array($decoded['checklist'])) {
             $hasDottedNo = false;
             foreach ($decoded['checklist'] as $row) {
                 if (is_array($row) && isset($row['no']) && strpos((string)$row['no'], '.') !== false) {
@@ -200,9 +213,12 @@ function computeJsonProgress($decoded): array {
         }
 
         if (isset($decoded['measurements']) && is_array($decoded['measurements'])) {
+            $mFields = [];
+            if (!isset($hiddenPhases['pre_measure'])) $mFields[] = 'hasilBefore';
+            if (!isset($hiddenPhases['post_measure'])) $mFields[] = 'hasilAfter';
             foreach ($decoded['measurements'] as $row) {
                 if (!is_array($row)) continue;
-                foreach (['hasilBefore', 'hasilAfter'] as $field) {
+                foreach ($mFields as $field) {
                     $dataTotal++;
                     if (isset($row[$field]) && isFilledScalarValue($row[$field])) $dataFilled++;
                 }
