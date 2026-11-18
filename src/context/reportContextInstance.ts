@@ -22,6 +22,15 @@ import type {
   RecommendationItem,
 } from '../types/schema';
 import type { ReportLockInfo } from '../lib/reportApi';
+import type { SwapPrePostOptions } from '../lib/phaseSwap';
+
+export interface SwapPhasesOutcome {
+  ok: boolean;
+  error?: string;
+  swappedCatalogPairs?: number;
+  movedCustomSlots?: number;
+  swappedMeasurements?: number;
+}
 
 export interface ActiveDeviceSummary {
   deviceId: string;
@@ -108,6 +117,7 @@ export interface ReportContextType {
   deletePhotoSlot: (slotId: string) => void;
   migrateImages: () => Promise<{ success: boolean; convertedCount: number; newSizeBytes?: number }>;
   resetAll: (targetId?: string) => Promise<boolean>;
+  swapPrePostPhases: (targetId: string, options: SwapPrePostOptions) => Promise<SwapPhasesOutcome>;
   deviceId: string;
   deviceName: string;
   setDeviceName: (name: string) => void;

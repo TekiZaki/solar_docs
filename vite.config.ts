@@ -41,6 +41,9 @@ export default defineConfig(({ command }) => ({
   server: {
     host: true,
     port: 3000,
+    watch: {
+      ignored: ['**/public/data/**', '**/*.tmp'],
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

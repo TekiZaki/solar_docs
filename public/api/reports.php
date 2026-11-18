@@ -770,6 +770,111 @@ if ($method === 'POST') {
         exit;
     }
 
+    // 4b. Swap phase image files on disk and persist updated state atomically
+    if ($action === 'swap_phases') {
+        $id = sanitizeId($payload['id'] ?? ($payload['reportId'] ?? ''));
+        if ($id === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'ID laporan tidak valid.']);
+            exit;
+        }
+        $deviceId = trim((string)($payload['deviceId'] ?? ''));
+        $otherLock = isLockedByOtherDevice($locksDir, $id, $deviceId);
+        if ($otherLock !== null) {
+            http_response_code(423);
+            echo json_encode([
+                'error' => 'Berkas sedang dipakai oleh ' . ($otherLock['deviceName'] ?? 'perangkat lain') . '.',
+                'locked' => true,
+                'lock' => $otherLock,
+            ]);
+            exit;
+        }
+
+        $targetFile = $dataDir . '/' . $id . '.json';
+        if (!file_exists($targetFile)) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Berkas laporan tidak ditemukan.']);
+            exit;
+        }
+
+        $existingRaw = readFileLocked($targetFile);
+        $existingJson = $existingRaw !== false ? json_decode($existingRaw, true) : null;
+
+        $state = $payload['state'] ?? null;
+        if (!is_array($state)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'State laporan tidak valid.']);
+            exit;
+        }
+        $state['id'] = $id;
+        if (empty($state['name'])) {
+            $state['name'] = is_array($existingJson) && !empty($existingJson['name'])
+                ? $existingJson['name']
+                : str_replace('_', ' ', $id);
+        }
+
+        $encoded = json_encode($state, JSON_PRETTY_PRINT);
+        if ($encoded === false) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Gagal mengodekan JSON: ' . json_last_error_msg()]);
+            exit;
+        }
+
+        $pairs = is_array($payload['pairs'] ?? null) ? $payload['pairs'] : [];
+        $reportDir = $dataDir . '/' . $id;
+        $swappedFiles = 0;
+
+        $swapDiskPair = static function (string $dir, string $fileAName, string $fileBName): bool {
+            $fileA = $dir . '/' . $fileAName;
+            $fileB = $dir . '/' . $fileBName;
+            $hasA = is_file($fileA);
+            $hasB = is_file($fileB);
+            if (!$hasA && !$hasB) return false;
+            if ($hasA && $hasB) {
+                $tmp = $dir . '/.swap_' . uniqid('', true) . '_' . $fileAName;
+                if (!@rename($fileA, $tmp)) return false;
+                if (!@rename($fileB, $fileA)) {
+                    @rename($tmp, $fileA);
+                    return false;
+                }
+                if (!@rename($tmp, $fileB)) {
+                    @rename($fileA, $fileB);
+                    @rename($tmp, $fileA);
+                    return false;
+                }
+                return true;
+            }
+            return $hasA ? @rename($fileA, $fileB) : @rename($fileB, $fileA);
+        };
+
+        if (is_dir($reportDir) && !empty($pairs)) {
+            foreach ($pairs as $pair) {
+                if (!is_array($pair)) continue;
+                $slotA = sanitizeId((string)($pair['a'] ?? ''));
+                $slotB = sanitizeId((string)($pair['b'] ?? ''));
+                if ($slotA === '' || $slotB === '' || $slotA === $slotB) continue;
+                if ($swapDiskPair($reportDir, $slotA . '.jpg', $slotB . '.jpg')) {
+                    $swappedFiles++;
+                }
+                $swapDiskPair($reportDir, $slotA . '_raw.jpg', $slotB . '_raw.jpg');
+            }
+        }
+
+        if (!writeFileAtomic($targetFile, $encoded)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Gagal menulis ke berkas pada server.']);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'id' => $id,
+            'swappedFiles' => $swappedFiles,
+            'updatedAt' => date('Y-m-d H:i:s'),
+        ]);
+        exit;
+    }
+
     // 5. Default: Save state JSON
     $id = sanitizeId($payload['id'] ?? 'REPORT_MT_PLTS_JKT_SMPN_72');
     $deviceId = trim((string)($payload['deviceId'] ?? ''));

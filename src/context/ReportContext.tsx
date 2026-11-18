@@ -18,17 +18,19 @@ import { calculateSTCDeviation } from '../lib/calculations';
 import {
   saveReportState, deleteSlotImage,
   migrateReportImages, fetchReportList, fetchActiveDevicesMap, createReportOnServer,
+  fetchReportById, swapReportPhases,
 } from '../lib/reportApi';
+import { swapPrePostData, type SwapPrePostOptions } from '../lib/phaseSwap';
 import {
   insertMeasurementInList, addMeasurementToList,
   deleteMeasurementFromList, updateMeasurementInList,
 } from './measurementOperations';
 import { createNewCustomSlot, insertSlotInMap, moveSlotInMap } from './slotOperations';
-import { createDefaultState } from './reportStateHelpers';
+import { createDefaultState, mergeStateWithSlots } from './reportStateHelpers';
 import { useReportSync } from './useReportSync';
 import { usePhotoSlotActions } from './usePhotoSlotActions';
 import { useReportLock } from './useReportLock';
-import { ReportContext, type ReportSummary } from './reportContextInstance';
+import { ReportContext, type ReportSummary, type SwapPhasesOutcome } from './reportContextInstance';
 
 export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [reportList, setReportList] = useState<ReportSummary[]>([]);
@@ -439,6 +441,43 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return ok;
   };
 
+  const swapPrePostPhases = async (
+    targetId: string,
+    options: SwapPrePostOptions
+  ): Promise<SwapPhasesOutcome> => {
+    const idToSwap = targetId || currentReportId;
+    let baseState: MaintenanceReportState;
+
+    if (idToSwap === currentReportId) {
+      baseState = state;
+    } else {
+      const raw = await fetchReportById(idToSwap);
+      if (!raw || typeof raw !== 'object') {
+        return { ok: false, error: 'Gagal memuat berkas target dari server.' };
+      }
+      baseState = mergeStateWithSlots(raw);
+    }
+
+    const result = swapPrePostData(baseState, idToSwap, options);
+    const res = await swapReportPhases(idToSwap, result.nextState, result.fileSwapPairs, deviceId);
+    if (!res.ok) {
+      return { ok: false, error: res.error || 'Gagal menukar data fase.' };
+    }
+
+    if (idToSwap === currentReportId) {
+      replaceState(result.nextState);
+      setSaveStatus('saved');
+    }
+    await refreshReportList();
+
+    return {
+      ok: true,
+      swappedCatalogPairs: result.swappedCatalogPairs,
+      movedCustomSlots: result.movedCustomSlots,
+      swappedMeasurements: result.swappedMeasurements,
+    };
+  };
+
   return (
     <ReportContext.Provider
       value={{
@@ -484,6 +523,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deletePhotoSlot,
         migrateImages,
         resetAll,
+        swapPrePostPhases,
         deviceId,
         deviceName,
         setDeviceName,

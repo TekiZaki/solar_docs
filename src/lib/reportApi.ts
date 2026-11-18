@@ -244,3 +244,35 @@ export async function saveReportState(
     return false;
   }
 }
+
+export async function swapReportPhases(
+  id: string,
+  reportState: MaintenanceReportState,
+  pairs: Array<{ a: string; b: string }>,
+  deviceId: string = getDeviceId()
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const sanitizedState = sanitizeStateForSave(reportState);
+    const res = await fetch(`${API_ENDPOINT}?action=swap_phases`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        deviceId,
+        pairs,
+        state: sanitizedState,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: (data && typeof data.error === 'string' && data.error) || 'Gagal menukar fase di server.',
+      };
+    }
+    return { ok: Boolean(data?.success) };
+  } catch (err) {
+    console.error('Swap phases failed:', err);
+    return { ok: false, error: 'Gagal terhubung ke server.' };
+  }
+}
