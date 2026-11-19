@@ -90,6 +90,7 @@ export interface ReportContextType {
     initialData?: Partial<ElectricalMeasurement>
   ) => void;
   deleteMeasurement: (id: string) => void;
+  syncMeasurementsFromCaptions: (mode: 'before' | 'after') => number;
   updateDatasheet: (fields: Partial<PVDatasheet>) => void;
   updateSTCRow: (stringIndex: number, rowIndex: number, fields: Partial<STCDataRow>) => void;
   updateConclusions: (fields: Partial<MaintenanceReportState['conclusions']>) => void;

@@ -7,7 +7,7 @@
 // - Notes: Follows Scandinavian design (clean table layout, monochrome borders, high contrast)
 // ---
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useReport } from '../../context/useReport';
 import { EXAMPLE_MEASUREMENTS } from '../../constants/defaultData';
 import { MeasurementTableRow } from './MeasurementTableRow';
@@ -38,7 +38,16 @@ export const MeasurementTable: React.FC<MeasurementTableProps> = ({
     insertMeasurement,
     addMeasurement,
     deleteMeasurement,
+    syncMeasurementsFromCaptions,
   } = useReport();
+
+  const [captionSyncMsg, setCaptionSyncMsg] = useState<string>('');
+
+  const handleSyncFromCaptions = () => {
+    const count = syncMeasurementsFromCaptions(mode);
+    setCaptionSyncMsg(count > 0 ? `Tersalin (${count} baris)` : 'Sudah sinkron');
+    setTimeout(() => setCaptionSyncMsg(''), 2500);
+  };
 
   const dcItems = state.measurements.filter((m) => m.id.startsWith('dc_'));
   const acItems = state.measurements.filter(
@@ -100,6 +109,21 @@ export const MeasurementTable: React.FC<MeasurementTableProps> = ({
           <p className="text-xs text-slate-500 mt-0.5">
             {subtitle || defaultSubtitle}
           </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {captionSyncMsg && (
+            <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">
+              {captionSyncMsg}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleSyncFromCaptions}
+            className="text-xs font-medium text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded border border-slate-300 transition"
+            title="Salin semua angka pengukuran dari deskripsi/caption foto fase ini ke tabel"
+          >
+            Tarik dari Caption Foto
+          </button>
         </div>
       </div>
 

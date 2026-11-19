@@ -434,7 +434,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
         allowInsert={allowInsert}
         onMovePrev={() => movePhotoSlot(slot.id, 'prev')}
         onMoveNext={() => movePhotoSlot(slot.id, 'next')}
-        onAddSlot={() => addPhotoSlot(slot.phaseKey, undefined, slot.id)}
+        onAddSlot={() => addPhotoSlot(slot.phaseKey, slot.caption || undefined, slot.id)}
         onDeleteSlot={() => {
           if (window.confirm('Hapus kartu foto tambahan ini?')) {
             deletePhotoSlot(slot.id);
@@ -485,7 +485,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
             />
 
             {/* Bottom helper badge */}
-            <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none transition opacity-75 group-hover:opacity-100">
+            <div className="absolute bottom-2 inset-x-2 flex justify-center pointer-events-none transition opacity-0 group-hover:opacity-100">
               <span className="text-[10px] font-medium bg-black/60 text-white px-2 py-0.5 rounded backdrop-blur-sm shadow-sm text-center">
                 {slot.isFitted
                   ? 'Pas (Latar Putih) • Ketuk 2x untuk Penuh'

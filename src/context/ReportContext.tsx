@@ -22,6 +22,10 @@ import {
 } from '../lib/reportApi';
 import { swapPrePostData, type SwapPrePostOptions } from '../lib/phaseSwap';
 import {
+  applyCaptionToMeasurements,
+  syncMeasurementsFromPhaseCaptions,
+} from '../lib/captionMeasurementSync';
+import {
   insertMeasurementInList, addMeasurementToList,
   deleteMeasurementFromList, updateMeasurementInList,
 } from './measurementOperations';
@@ -143,14 +147,34 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     applyUpdate((prev) => {
       const slot = prev.photoSlots[slotId];
       if (!slot) return prev;
+      const nextSlot = { ...slot, ...fields };
+      const nextMeasurements =
+        fields.caption !== undefined && !nextSlot.excludeFromDocx
+          ? applyCaptionToMeasurements(prev.measurements, nextSlot.phaseKey, fields.caption)
+          : prev.measurements;
       return {
         ...prev,
         photoSlots: {
           ...prev.photoSlots,
-          [slotId]: { ...slot, ...fields },
+          [slotId]: nextSlot,
         },
+        measurements: nextMeasurements,
       };
     });
+  };
+
+  const syncMeasurementsFromCaptions = (mode: 'before' | 'after'): number => {
+    let updatedCount = 0;
+    applyUpdate((prev) => {
+      const res = syncMeasurementsFromPhaseCaptions(prev.measurements, prev.photoSlots, mode);
+      updatedCount = res.updatedCount;
+      if (res.measurements === prev.measurements) return prev;
+      return {
+        ...prev,
+        measurements: res.measurements,
+      };
+    });
+    return updatedCount;
   };
 
   const setPhasePhotosDate = (phaseKey: string, date: string) => {
@@ -505,6 +529,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         insertMeasurement,
         addMeasurement,
         deleteMeasurement,
+        syncMeasurementsFromCaptions,
         updateDatasheet,
         updateSTCRow,
         updateConclusions,

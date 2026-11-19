@@ -225,6 +225,9 @@ if ($method === 'GET') {
 
     if ($getAction === 'sync_manifest') {
         verifySyncAccess($baseDataDir, 'sync_manifest');
+        if (extension_loaded('zlib') && !ini_get('zlib.output_compression') && !ob_get_level()) {
+            @ob_start('ob_gzhandler');
+        }
 
         $manifestReports = [];
         $manifestImages = [];
@@ -232,29 +235,19 @@ if ($method === 'GET') {
         $files = glob($dataDir . '/*.json') ?: [];
         foreach ($files as $file) {
             $fileId = basename($file, '.json');
-            $mtime = filemtime($file);
+            $mtime = filemtime($file) ?: 0;
             $rawContent = readFileLocked($file);
             $decoded = $rawContent !== false ? json_decode($rawContent, true) : null;
             $lokasi = is_array($decoded) ? ($decoded['location']['lokasi'] ?? '') : '';
             $name = is_array($decoded) ? ($decoded['name'] ?? str_replace('_', ' ', $fileId)) : $fileId;
 
-            $uploadedPhotos = 0;
-            if (is_array($decoded) && !empty($decoded['photoSlots']) && is_array($decoded['photoSlots'])) {
-                foreach ($decoded['photoSlots'] as $slot) {
-                    if (!empty($slot['isUploaded']) && (!empty($slot['imagePath']) || !empty($slot['imageDataUrl']))) {
-                        $uploadedPhotos++;
-                    }
-                }
-            }
-
             $manifestReports[] = [
                 'id' => $fileId,
                 'name' => $name,
                 'lokasi' => $lokasi,
-                'photoCount' => $uploadedPhotos,
-                'sizeBytes' => filesize($file) ?: 0,
+                'sizeBytes' => $rawContent !== false ? strlen($rawContent) : (filesize($file) ?: 0),
                 'updatedAt' => date('Y-m-d H:i:s', $mtime),
-                'md5' => md5_file($file) ?: '',
+                'md5' => $rawContent !== false ? md5($rawContent) : (md5_file($file) ?: ''),
             ];
         }
 
@@ -265,16 +258,15 @@ if ($method === 'GET') {
             if (!is_array($entries)) continue;
             foreach ($entries as $entryName) {
                 if ($entryName === '.' || $entryName === '..') continue;
-                $fullImgPath = $dirPath . '/' . $entryName;
-                if (!is_file($fullImgPath)) continue;
                 if (!preg_match('/\.(jpe?g|png|webp)$/i', $entryName)) continue;
+                $fullImgPath = $dirPath . '/' . $entryName;
+                $imgSize = @filesize($fullImgPath);
+                if ($imgSize === false) continue;
 
                 $manifestImages[] = [
                     'reportId' => $dirReportId,
                     'fileName' => $entryName,
-                    'relativePath' => 'data/reports/' . $dirReportId . '/' . $entryName,
-                    'sizeBytes' => filesize($fullImgPath) ?: 0,
-                    'mtime' => filemtime($fullImgPath) ?: 0,
+                    'sizeBytes' => $imgSize,
                 ];
             }
         }
@@ -299,11 +291,14 @@ if ($method === 'GET') {
 
     if ($getAction === 'sync_image_hashes') {
         verifySyncAccess($baseDataDir, 'sync_image_hashes');
+        if (extension_loaded('zlib') && !ini_get('zlib.output_compression') && !ob_get_level()) {
+            @ob_start('ob_gzhandler');
+        }
         $rawIds = trim((string)($_GET['reportIds'] ?? ''));
         $ids = array_values(array_filter(array_map('sanitizeId', explode(',', $rawIds))));
         $hashes = [];
 
-        foreach (array_slice($ids, 0, 15) as $rId) {
+        foreach (array_slice($ids, 0, 20) as $rId) {
             $dirPath = $dataDir . '/' . $rId;
             if (!is_dir($dirPath)) continue;
             $entries = @scandir($dirPath);
@@ -311,10 +306,11 @@ if ($method === 'GET') {
             $reportHashes = [];
             foreach ($entries as $entryName) {
                 if ($entryName === '.' || $entryName === '..') continue;
-                $fullImgPath = $dirPath . '/' . $entryName;
-                if (!is_file($fullImgPath)) continue;
                 if (!preg_match('/\.(jpe?g|png|webp)$/i', $entryName)) continue;
-                $reportHashes[$entryName] = md5_file($fullImgPath) ?: '';
+                $fullImgPath = $dirPath . '/' . $entryName;
+                $hash = @md5_file($fullImgPath);
+                if ($hash === false) continue;
+                $reportHashes[$entryName] = $hash;
             }
             $hashes[$rId] = $reportHashes;
         }
@@ -473,6 +469,86 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
+    $baseDataDir = __DIR__ . '/../data';
+    if (($_GET['action'] ?? '') === 'sync_upload') {
+        verifySyncAccess($baseDataDir, 'sync_upload');
+        $type = (string)($_GET['type'] ?? '');
+        $reportId = sanitizeId((string)($_GET['reportId'] ?? ''));
+        if ($reportId === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'reportId tidak valid.']);
+            exit;
+        }
+
+        $rawBody = file_get_contents('php://input');
+        if ($rawBody === false || $rawBody === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Body upload kosong.']);
+            exit;
+        }
+
+        if ($type === 'json') {
+            $decoded = json_decode($rawBody, true);
+            if (!is_array($decoded)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Format JSON tidak valid.']);
+                exit;
+            }
+            $targetJson = $dataDir . '/' . $reportId . '.json';
+            if (!writeFileAtomic($targetJson, $rawBody)) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Gagal menulis JSON ke disk server.']);
+                exit;
+            }
+            appendSyncLog($baseDataDir, 'sync_upload', 'ok', "JSON {$reportId} (" . strlen($rawBody) . " B)");
+            echo json_encode([
+                'success' => true,
+                'type' => 'json',
+                'reportId' => $reportId,
+                'sizeBytes' => strlen($rawBody),
+                'md5' => md5($rawBody),
+            ], JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        if ($type === 'image') {
+            $fileName = basename((string)($_GET['file'] ?? ''));
+            if (!preg_match('/^[a-zA-Z0-9_.-]+\.(jpe?g|png|webp)$/i', $fileName)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Nama berkas gambar tidak valid.']);
+                exit;
+            }
+            $len = strlen($rawBody);
+            $isJpeg = $len >= 32 && substr($rawBody, 0, 3) === "\xFF\xD8\xFF";
+            $isPng = $len >= 32 && substr($rawBody, 0, 8) === "\x89PNG\r\n\x1A\n";
+            $isWebp = $len >= 32 && substr($rawBody, 0, 4) === 'RIFF' && substr($rawBody, 8, 4) === 'WEBP';
+            if (!$isJpeg && !$isPng && !$isWebp) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Payload bukan gambar JPEG/PNG/WebP yang valid.']);
+                exit;
+            }
+            $targetImg = $dataDir . '/' . $reportId . '/' . $fileName;
+            if (!writeFileAtomic($targetImg, $rawBody)) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Gagal menulis gambar ke disk server.']);
+                exit;
+            }
+            echo json_encode([
+                'success' => true,
+                'type' => 'image',
+                'reportId' => $reportId,
+                'fileName' => $fileName,
+                'sizeBytes' => $len,
+                'md5' => md5($rawBody),
+            ], JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        http_response_code(400);
+        echo json_encode(['error' => 'Parameter type harus json atau image.']);
+        exit;
+    }
+
     $input = file_get_contents('php://input');
     if (!$input) {
         http_response_code(400);
