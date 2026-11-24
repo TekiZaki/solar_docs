@@ -23,6 +23,16 @@ import type {
 } from '../types/schema';
 import type { ReportLockInfo } from '../lib/reportApi';
 import type { SwapPrePostOptions } from '../lib/phaseSwap';
+import type { CopyPlacementMode, SourcePhotoPayload } from '../lib/crossReportPhotoCopy';
+
+export interface ApplyCopiedPhotoSlotInput {
+  targetPhaseKey: PhotoSlot['phaseKey'];
+  mode: CopyPlacementMode;
+  targetSlotId: string;
+  insertAfterSlotId?: string | 'START';
+  includeDate: boolean;
+  sourcePayload: SourcePhotoPayload;
+}
 
 export interface SwapPhasesOutcome {
   ok: boolean;
@@ -116,6 +126,7 @@ export interface ReportContextType {
   ) => void;
   movePhotoSlot: (slotId: string, direction: 'prev' | 'next') => void;
   deletePhotoSlot: (slotId: string) => void;
+  applyCopiedPhotoSlot: (input: ApplyCopiedPhotoSlotInput) => Promise<{ finalSlotId: string }>;
   migrateImages: () => Promise<{ success: boolean; convertedCount: number; newSizeBytes?: number }>;
   resetAll: (targetId?: string) => Promise<boolean>;
   swapPrePostPhases: (targetId: string, options: SwapPrePostOptions) => Promise<SwapPhasesOutcome>;
@@ -125,6 +136,10 @@ export interface ReportContextType {
   setLockActive: (active: boolean) => void;
   isLockedByOther: boolean;
   lockOwner: ReportLockInfo | null;
+  showCellCopyButton: boolean;
+  showCellPasteButton: boolean;
+  setShowCellCopyButton: (show: boolean) => void;
+  setShowCellPasteButton: (show: boolean) => void;
 }
 
 export const ReportContext = createContext<ReportContextType | null>(null);

@@ -16,11 +16,13 @@ import type {
 import { DEFAULT_LOCATION, DEFAULT_REALIZATION_DATES } from '../constants/defaultData';
 import { calculateSTCDeviation } from '../lib/calculations';
 import {
-  saveReportState, deleteSlotImage,
+  saveReportState, deleteSlotImage, uploadSlotImage,
   migrateReportImages, fetchReportList, fetchActiveDevicesMap, createReportOnServer,
   fetchReportById, swapReportPhases,
 } from '../lib/reportApi';
 import { swapPrePostData, type SwapPrePostOptions } from '../lib/phaseSwap';
+import { buildUpdatedTargetState } from '../lib/crossReportPhotoCopy';
+import type { ApplyCopiedPhotoSlotInput } from './reportContextInstance';
 import {
   applyCaptionToMeasurements,
   syncMeasurementsFromPhaseCaptions,
@@ -36,8 +38,46 @@ import { usePhotoSlotActions } from './usePhotoSlotActions';
 import { useReportLock } from './useReportLock';
 import { ReportContext, type ReportSummary, type SwapPhasesOutcome } from './reportContextInstance';
 
+const LS_SHOW_CELL_COPY = 'solar_ui_show_salin_sel';
+const LS_SHOW_CELL_PASTE = 'solar_ui_show_tempel_disini';
+
+function readBoolPref(key: string, fallback: boolean): boolean {
+  try {
+    const val = window.localStorage.getItem(key);
+    if (val === '1' || val === 'true') return true;
+    if (val === '0' || val === 'false') return false;
+  } catch {
+    // ignore storage errors
+  }
+  return fallback;
+}
+
 export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [reportList, setReportList] = useState<ReportSummary[]>([]);
+  const [showCellCopyButton, setShowCellCopyButtonState] = useState<boolean>(() =>
+    readBoolPref(LS_SHOW_CELL_COPY, false)
+  );
+  const [showCellPasteButton, setShowCellPasteButtonState] = useState<boolean>(() =>
+    readBoolPref(LS_SHOW_CELL_PASTE, false)
+  );
+
+  const setShowCellCopyButton = useCallback((show: boolean) => {
+    setShowCellCopyButtonState(show);
+    try {
+      window.localStorage.setItem(LS_SHOW_CELL_COPY, show ? '1' : '0');
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const setShowCellPasteButton = useCallback((show: boolean) => {
+    setShowCellPasteButtonState(show);
+    try {
+      window.localStorage.setItem(LS_SHOW_CELL_PASTE, show ? '1' : '0');
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   const refreshReportList = useCallback(async (): Promise<ReportSummary[]> => {
     const list = await fetchReportList();
@@ -436,6 +476,56 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
+  const applyCopiedPhotoSlot = async (
+    input: ApplyCopiedPhotoSlotInput
+  ): Promise<{ finalSlotId: string }> => {
+    const now = Date.now();
+    const effectiveSlotId =
+      input.mode === 'insert' ? `slot_custom_${now}` : input.targetSlotId;
+    const hasPhoto = Boolean(input.sourcePayload.renderedDataUrl);
+
+    const [serverPath, rawServerPath] = await Promise.all([
+      input.sourcePayload.renderedDataUrl
+        ? uploadSlotImage(currentReportId, effectiveSlotId, input.sourcePayload.renderedDataUrl)
+        : Promise.resolve(null),
+      input.sourcePayload.rawDataUrl
+        ? uploadSlotImage(currentReportId, `${effectiveSlotId}_raw`, input.sourcePayload.rawDataUrl)
+        : Promise.resolve(null),
+    ]);
+
+    if (hasPhoto && !serverPath) {
+      throw new Error('Gagal mengunggah gambar ke berkas aktif.');
+    }
+
+    let finalSlotId = effectiveSlotId;
+    applyUpdate((prev) => {
+      const built = buildUpdatedTargetState(prev, {
+        targetPhaseKey: input.targetPhaseKey,
+        mode: input.mode,
+        targetSlotId: input.targetSlotId,
+        insertAfterSlotId: input.insertAfterSlotId,
+        customSlotId: input.mode === 'insert' ? effectiveSlotId : undefined,
+        caption: input.sourcePayload.caption,
+        includeDate: input.includeDate,
+        sourceDate: input.sourcePayload.date,
+        imagePath: serverPath || undefined,
+        rawImagePath: rawServerPath || undefined,
+        imageDataUrl: input.sourcePayload.renderedDataUrl || undefined,
+        rawImageDataUrl: input.sourcePayload.rawDataUrl || undefined,
+        hasPhoto,
+        panX: input.sourcePayload.panX,
+        panY: input.sourcePayload.panY,
+        isFitted: input.sourcePayload.isFitted,
+        now,
+      });
+      finalSlotId = built.finalSlotId;
+      return built.nextState;
+    });
+
+    await persistNow();
+    return { finalSlotId };
+  };
+
   const migrateImages = async () => {
     const res = await migrateReportImages(currentReportId);
     if (res.success) {
@@ -546,6 +636,7 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addPhotoSlot,
         movePhotoSlot,
         deletePhotoSlot,
+        applyCopiedPhotoSlot,
         migrateImages,
         resetAll,
         swapPrePostPhases,
@@ -555,6 +646,10 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setLockActive,
         isLockedByOther,
         lockOwner,
+        showCellCopyButton,
+        showCellPasteButton,
+        setShowCellCopyButton,
+        setShowCellPasteButton,
       }}
     >
       {children}

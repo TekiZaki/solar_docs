@@ -26,6 +26,7 @@ import { ScrollButtons } from './components/common/ScrollButtons';
 import { ResetPage } from './components/pages/ResetPage';
 import { JsonExplorerPage } from './components/pages/JsonExplorerPage';
 import { useReport } from './context/useReport';
+import { isRunningLocalHost } from './lib/crossReportPhotoCopy';
 
 type ViewMode = 'home' | 'general_info' | 'phase_select' | 'active_phase' | 'settings' | 'json_explorer';
 
@@ -292,9 +293,16 @@ export const AppContent: React.FC = () => {
   const uploadedCount = activeSlots.filter((s) => s.isUploaded).length;
   const missingPhotoCount = totalSlots - uploadedCount;
 
+  const isLocalEnv = isRunningLocalHost();
+  const pageBgClass = isLocalEnv ? 'bg-amber-100' : 'bg-slate-50';
+
+  React.useEffect(() => {
+    document.body.style.backgroundColor = isLocalEnv ? '#fef3c7' : '#f8fafc';
+  }, [isLocalEnv]);
+
   if (currentView === 'home') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+      <div className={`min-h-screen ${pageBgClass} flex flex-col justify-between`}>
         <header className="bg-white border-b border-black py-4 px-4 sm:px-6 text-left">
           <div className="w-full md:w-[90vw] min-w-90vw mx-auto flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -454,7 +462,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+    <div className={`min-h-screen ${pageBgClass} flex flex-col justify-between`}>
       {/* Top Header */}
       <Header
         onGoHome={navigateHome}
@@ -513,13 +521,7 @@ export const AppContent: React.FC = () => {
                 Langsung ke Pilihan Tahap &rarr;
               </button>
             </div>
-            <div
-              className={isLockedByOther ? 'pointer-events-none select-none opacity-55 grayscale-[40%]' : undefined}
-              aria-disabled={isLockedByOther || undefined}
-              onFocusCapture={isLockedByOther ? (e) => (e.target as HTMLElement).blur?.() : undefined}
-            >
-              <GeneralInfo onContinueToPhases={() => setCurrentView('phase_select')} />
-            </div>
+            <GeneralInfo onContinueToPhases={() => setCurrentView('phase_select')} />
           </div>
         )}
 

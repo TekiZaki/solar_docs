@@ -1,5 +1,6 @@
 @echo off
 echo Starting PHP JSON Database Server on http://127.0.0.1:8000 ...
 start /B cmd /c "php -S 127.0.0.1:8000 -t public/ > nul 2>&1"
+
 echo Starting Solar Docs Web App with Bun on http://localhost:3000 (accessible on local network) ...
-bun run dev --host --port 3000
+bun run dev --host --port 3000 --open

@@ -16,7 +16,13 @@ import {
   getTodayIndonesianDate,
 } from '../../lib/dateUtils';
 import { CameraModal } from './CameraModal';
+import { CopyPhotoSlotModal } from './CopyPhotoSlotModal';
 import { usePhotoFileDrop, usePhotoGestures } from './usePhotoGestures';
+import {
+  copyPhotoCellToClipboard,
+  fetchSourcePayloadFromCellToken,
+  resolvePhotoCellTokenForPaste,
+} from '../../lib/crossReportPhotoCopy';
 interface PhotoCardEmptyPlaceholderProps {
   onCamera: () => void;
   onGallery: () => void;
@@ -277,6 +283,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
   allowInsert = true,
 }) => {
   const {
+    currentReportId,
     setPhotoSlotImage,
     setPhotoSlotDataUrl,
     removePhotoSlotImage,
@@ -284,16 +291,24 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
     deletePhotoSlot,
     addPhotoSlot,
     movePhotoSlot,
+    applyCopiedPhotoSlot,
+    showCellCopyButton,
+    showCellPasteButton,
   } = useReport();
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const [isPasting, setIsPasting] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [pasteError, setPasteError] = useState('');
+  const [cellCopyStatus, setCellCopyStatus] = useState<'idle' | 'copied'>('idle');
+  const [isPastingCell, setIsPastingCell] = useState(false);
+  const [cellPasteStatus, setCellPasteStatus] = useState<'idle' | 'pasted'>('idle');
+  const [cellSyncError, setCellSyncError] = useState('');
 
   const { isDraggingFile, dropHandlers } = usePhotoFileDrop(async (file) => {
     await setPhotoSlotImage(slot.id, file);
@@ -419,8 +434,51 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
     });
   };
 
+  const handleCopyCellToken = async () => {
+    try {
+      setCellSyncError('');
+      await copyPhotoCellToClipboard(currentReportId, slot);
+      setCellCopyStatus('copied');
+      setTimeout(() => setCellCopyStatus('idle'), 1800);
+    } catch {
+      setCellSyncError('Gagal menyalin sel ke clipboard.');
+    }
+  };
+
+  const handlePasteCellHere = async () => {
+    try {
+      setCellSyncError('');
+      setIsPastingCell(true);
+      const token = await resolvePhotoCellTokenForPaste();
+      if (!token) return;
+      const sourcePayload = await fetchSourcePayloadFromCellToken(token);
+      await applyCopiedPhotoSlot({
+        targetPhaseKey: slot.phaseKey,
+        mode: 'overwrite',
+        targetSlotId: slot.id,
+        includeDate: false,
+        sourcePayload,
+      });
+      setCellPasteStatus('pasted');
+      setTimeout(() => setCellPasteStatus('idle'), 1800);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal menempel sel.';
+      setCellSyncError(msg);
+    } finally {
+      setIsPastingCell(false);
+    }
+  };
+
   const objectPosX = ((1 - currentPanX) / 2) * 100;
   const objectPosY = ((1 - currentPanY) / 2) * 100;
+  const previewSrc =
+    effectiveImageUrl ||
+    slot.imageDataUrl ||
+    (slot.imagePath
+      ? `${import.meta.env.BASE_URL}${slot.imagePath}${slot.updatedAt ? `?v=${slot.updatedAt}` : ''}`
+      : undefined);
+  const hasPhoto = Boolean(slot.isUploaded && previewSrc);
+  const canCopyToReport = hasPhoto || slot.caption.trim().length > 0;
 
   return (
     <div
@@ -503,75 +561,79 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
 
             {/* Hover Actions Bar */}
             <div
-              className={`absolute inset-0 bg-slate-900/40 transition flex flex-wrap content-center items-center justify-center gap-1.5 p-2 z-20 pointer-events-none ${
+              className={`absolute inset-0 bg-slate-900/45 transition flex flex-col items-center justify-center gap-2 p-2 z-20 pointer-events-none ${
                 copyStatus === 'copied' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
               } ${
                 isDragging ? 'hidden' : ''
               }`}
             >
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFitted();
-                }}
-                className="pointer-events-auto bg-white/95 hover:bg-white text-slate-800 text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
-              >
-                {slot.isFitted ? 'Penuh' : 'Pas'}
-              </button>
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  galleryInputRef.current?.click();
-                }}
-                className="pointer-events-auto bg-white/95 hover:bg-white text-slate-800 text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
-              >
-                Ganti
-              </button>
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCopyImage();
-                }}
-                disabled={isCopying}
-                className={`pointer-events-auto text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition ${
-                  copyStatus === 'copied'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white/95 hover:bg-white disabled:bg-slate-200 text-slate-800'
-                }`}
-                title="Salin gambar ke clipboard"
-              >
-                {isCopying ? 'Menyalin...' : copyStatus === 'copied' ? 'Tersalin' : 'Salin'}
-              </button>
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePasteImage();
-                }}
-                disabled={isPasting}
-                className="pointer-events-auto bg-white/95 hover:bg-white disabled:bg-slate-200 text-slate-800 text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
-                title="Tempel gambar dari clipboard"
-              >
-                {isPasting ? 'Menempel...' : 'Tempel'}
-              </button>
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removePhotoSlotImage(slot.id);
-                }}
-                className="pointer-events-auto bg-rose-600 hover:bg-rose-700 text-white text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
-              >
-                Hapus
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFitted();
+                  }}
+                  className="pointer-events-auto bg-sky-600 hover:bg-sky-700 text-white text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
+                >
+                  {slot.isFitted ? 'Penuh' : 'Pas'}
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    galleryInputRef.current?.click();
+                  }}
+                  className="pointer-events-auto bg-amber-600 hover:bg-amber-700 text-white text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
+                >
+                  Ganti
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyImage();
+                  }}
+                  disabled={isCopying}
+                  className={`pointer-events-auto text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition text-white ${
+                    copyStatus === 'copied'
+                      ? 'bg-emerald-700 ring-2 ring-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400'
+                  }`}
+                  title="Salin gambar ke clipboard"
+                >
+                  {isCopying ? 'Menyalin...' : copyStatus === 'copied' ? 'Tersalin' : 'Salin'}
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePasteImage();
+                  }}
+                  disabled={isPasting}
+                  className="pointer-events-auto bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white text-xs px-2.5 py-1.5 rounded font-medium shadow-sm transition"
+                  title="Tempel gambar dari clipboard"
+                >
+                  {isPasting ? 'Menempel...' : 'Tempel'}
+                </button>
+              </div>
+              <div className="flex items-center justify-center">
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removePhotoSlotImage(slot.id);
+                  }}
+                  className="pointer-events-auto bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-1.5 rounded font-medium shadow-sm transition"
+                >
+                  Hapus
+                </button>
+              </div>
             </div>
           </>
         ) : (
@@ -620,6 +682,81 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
         onDatePicked={handleDatePicked}
         onUpdateSlot={(fields) => updatePhotoSlot(slot.id, fields)}
       />
+
+      {/* Cell Sync Copy / Paste & Copy-to-Report Actions */}
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          {showCellCopyButton && (
+            <button
+              type="button"
+              onClick={handleCopyCellToken}
+              disabled={!canCopyToReport}
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded border shadow-sm transition ${
+                cellCopyStatus === 'copied'
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-slate-100 hover:bg-slate-200 disabled:bg-slate-200 disabled:text-slate-400 text-slate-800 border-slate-300'
+              }`}
+              title={
+                canCopyToReport
+                  ? 'Salin token sel (foto & deskripsi) untuk ditempel di kartu lain (Lokal / Prod)'
+                  : 'Isi foto atau deskripsi terlebih dahulu'
+              }
+            >
+              <span>{cellCopyStatus === 'copied' ? 'Sel Disalin' : 'Salin Sel'}</span>
+            </button>
+          )}
+
+          {showCellPasteButton && (
+            <button
+              type="button"
+              onClick={handlePasteCellHere}
+              disabled={isPastingCell}
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded border shadow-sm transition ${
+                cellPasteStatus === 'pasted'
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-white hover:bg-slate-100 disabled:bg-slate-200 disabled:text-slate-400 text-slate-800 border-slate-300'
+              }`}
+              title="Tempel foto & deskripsi dari sel yang sudah disalin (Ctrl+C -> Tempel disini)"
+            >
+              <span>
+                {isPastingCell ? 'Menempel...' : cellPasteStatus === 'pasted' ? 'Tertempel' : 'Tempel disini'}
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsCopyModalOpen(true)}
+            disabled={!canCopyToReport}
+            className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded border border-slate-900 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 disabled:border-slate-400 text-white shadow-sm transition"
+            title={
+              canCopyToReport
+                ? 'Salin foto dan deskripsi ke berkas lain (Lokal / Prod)'
+                : 'Isi foto atau deskripsi terlebih dahulu'
+            }
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+            </svg>
+            <span>Salin ke Berkas</span>
+          </button>
+        </div>
+
+        {cellSyncError && (
+          <p className="text-[11px] text-rose-200 bg-rose-900/70 px-2 py-1 rounded text-right">
+            {cellSyncError}
+          </p>
+        )}
+      </div>
+
+      {isCopyModalOpen && (
+        <CopyPhotoSlotModal
+          isOpen={isCopyModalOpen}
+          sourceSlot={slot}
+          sourcePreviewUrl={previewSrc}
+          onClose={() => setIsCopyModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

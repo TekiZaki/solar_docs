@@ -72,7 +72,7 @@ export const PhaseSelectionHub: React.FC<PhaseSelectionHubProps> = ({
   onOpenExport,
   onOpenMissingItems,
 }) => {
-  const { state, migrateImages, setPhaseHidden } = useReport();
+  const { state, migrateImages, setPhaseHidden, isLockedByOther } = useReport();
   const [isMigrating, setIsMigrating] = React.useState(false);
   const [migrateStatus, setMigrateStatus] = React.useState<{ text: string; error?: boolean } | null>(null);
 
@@ -236,25 +236,35 @@ export const PhaseSelectionHub: React.FC<PhaseSelectionHubProps> = ({
                     <span className="text-xs font-mono font-medium text-slate-500">
                       {stats.uploaded}/{stats.total} Foto
                     </span>
-                    <button
-                      type="button"
+                    <span
                       onClick={(e) => {
-                        e.stopPropagation();
-                        setPhaseHidden(phase.key, !isHidden);
+                        if (isLockedByOther) e.stopPropagation();
                       }}
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border transition ${
-                        isHidden
-                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
-                          : 'bg-white text-slate-600 border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
-                      }`}
-                      title={
-                        isHidden
-                          ? `Tampilkan kembali ${phase.badge}`
-                          : `Hilangkan ${phase.badge} dari laporan dan ekspor DOCX`
-                      }
                     >
-                      {isHidden ? 'Tampilkan' : 'Hilangkan'}
-                    </button>
+                      <button
+                        type="button"
+                        disabled={isLockedByOther}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isLockedByOther) return;
+                          setPhaseHidden(phase.key, !isHidden);
+                        }}
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded border transition disabled:opacity-45 disabled:cursor-not-allowed ${
+                          isHidden
+                            ? 'bg-amber-100 text-amber-900 border-amber-400 enabled:hover:bg-amber-200'
+                            : 'bg-white text-slate-600 border-slate-300 enabled:hover:bg-rose-50 enabled:hover:text-rose-700 enabled:hover:border-rose-300'
+                        }`}
+                        title={
+                          isLockedByOther
+                            ? 'Mode hanya baca'
+                            : isHidden
+                            ? `Tampilkan kembali ${phase.badge}`
+                            : `Hilangkan ${phase.badge} dari laporan dan ekspor DOCX`
+                        }
+                      >
+                        {isHidden ? 'Tampilkan' : 'Hilangkan'}
+                      </button>
+                    </span>
                   </div>
                 </div>
                 <h4 className="text-base font-bold text-slate-900 group-hover:text-slate-800">

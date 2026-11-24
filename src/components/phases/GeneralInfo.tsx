@@ -32,6 +32,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
     refreshReportList,
     refreshActiveDevices,
     updateLocation,
+    isLockedByOther,
   } = useReport();
 
   const [showNewModal, setShowNewModal] = useState(false);
@@ -129,9 +130,10 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
           <div className="flex items-center gap-2">
             <button
               type="button"
+              disabled={isLockedByOther}
               onClick={() => saveReportNow()}
-              className="text-xs px-3 py-1.5 rounded border border-slate-300 hover:bg-black text-white font-medium transition"
-              title="Simpan perubahan langsung ke berkas JSON"
+              className="text-xs px-3 py-1.5 rounded border border-slate-300 hover:bg-black disabled:opacity-45 disabled:cursor-not-allowed text-white font-medium transition"
+              title={isLockedByOther ? 'Mode hanya baca' : 'Simpan perubahan langsung ke berkas JSON'}
             >
               Simpan Sekarang
             </button>
@@ -250,8 +252,14 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
         )}
       </div>
 
-      {/* Main Info Grid */}
-      <div className="bg-gray-600 border border-slate-200 rounded-lg p-4 sm:p-5 space-y-4 shadow-sm">
+      {/* Editable General Info Sections (locked when another device holds the lease) */}
+      <div
+        className={isLockedByOther ? 'space-y-6 pointer-events-none select-none opacity-55 grayscale-[40%]' : 'space-y-6'}
+        aria-disabled={isLockedByOther || undefined}
+        onFocusCapture={isLockedByOther ? (e) => (e.target as HTMLElement).blur?.() : undefined}
+      >
+        {/* Main Info Grid */}
+        <div className="bg-gray-600 border border-slate-200 rounded-lg p-4 sm:p-5 space-y-4 shadow-sm">
         <h3 className="text-sm font-semibold text-white">Data Administrasi Gedung</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -331,6 +339,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = ({ onContinueToPhases }) 
         <div className="max-w-md">
           {coverSlot && <PhotoCard slot={coverSlot} indexNumber={1} hideDate />}
         </div>
+      </div>
       </div>
 
       {onContinueToPhases && (
