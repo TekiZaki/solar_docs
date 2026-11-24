@@ -10,10 +10,11 @@
 import type { ElectricalMeasurement, MaintenancePhaseKey, MaintenanceReportState, PhotoSlot } from '../types/schema';
 import {
   DEFAULT_LOCATION, DEFAULT_REALIZATION_DATES, DEFAULT_CHECKLIST,
-  DEFAULT_MEASUREMENTS, DEFAULT_DATASHEET, DEFAULT_STC_STRINGS,
+  DEFAULT_MEASUREMENTS, DEFAULT_STC_STRINGS,
   DEFAULT_DAMAGES, DEFAULT_RECOMMENDATIONS, DEFAULT_CONCLUSIONS,
 } from '../constants/defaultData';
 import { createInitialPhotoSlots } from '../constants/photoSlots';
+import { resolveInitialDatasheet } from '../lib/inverterDatasheet';
 
 export const DEFAULT_REPORT_ID = 'REPORT_MT_PLTS_JKT_SMPN_72';
 export const ACTIVE_REPORT_KEY = 'solar_pv_active_report_id';
@@ -34,7 +35,7 @@ export function createDefaultState(): MaintenanceReportState {
     photoSlots: createInitialPhotoSlots(),
     checklist: DEFAULT_CHECKLIST,
     measurements: DEFAULT_MEASUREMENTS,
-    datasheet: DEFAULT_DATASHEET,
+    datasheet: resolveInitialDatasheet(DEFAULT_CHECKLIST),
     stcStrings: DEFAULT_STC_STRINGS,
     conclusions: DEFAULT_CONCLUSIONS,
     damages: DEFAULT_DAMAGES,
@@ -78,13 +79,14 @@ export function mergeStateWithSlots(parsed: Partial<MaintenanceReportState> & { 
   // already shows the correct name without needing Reset Default
   const reportId = typeof parsed.id === 'string' ? parsed.id.trim() : '';
   const customFileName = reportId ? `${reportId}.docx` : parsed.customFileName;
+  const checklist = parsed.checklist || DEFAULT_CHECKLIST;
   return {
     location: parsed.location || DEFAULT_LOCATION,
     realizationDates: parsed.realizationDates || DEFAULT_REALIZATION_DATES,
     photoSlots: mergedSlots,
-    checklist: parsed.checklist || DEFAULT_CHECKLIST,
+    checklist,
     measurements: withDefaultVocRows(parsed.measurements || DEFAULT_MEASUREMENTS),
-    datasheet: parsed.datasheet || DEFAULT_DATASHEET,
+    datasheet: resolveInitialDatasheet(checklist, parsed.datasheet),
     stcStrings: parsed.stcStrings || DEFAULT_STC_STRINGS,
     conclusions: parsed.conclusions || DEFAULT_CONCLUSIONS,
     damages: parsed.damages || DEFAULT_DAMAGES,

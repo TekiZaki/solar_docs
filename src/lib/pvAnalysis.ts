@@ -11,7 +11,14 @@ import type {
   TechnicalRecommendationItem,
   DamageItem,
 } from '../types/schema';
-import { parseIndoNumber } from './calculations';
+import { formatIndoNumber, parseIndoNumber } from './calculations';
+
+export interface STCTableRow {
+  parameter: string;
+  perhitungan: string;
+  stc: string;
+  smft1000: string;
+}
 
 export interface PVStringAnalysis {
   name: string;
@@ -37,6 +44,7 @@ export interface PVAnalysisResult {
   ratedCurrentImp: number;
   shortCircuitCurrentIsc: number;
   totalModules: number;
+  rawModuleCount: number;
   stringCount: number;
   modulesPerString: number;
   kapasitasPerString: number;
@@ -44,6 +52,7 @@ export interface PVAnalysisResult {
   vmpSTC: number;
   impSTC: number;
   iscSTC: number;
+  ffNominal: number;
   strings: PVStringAnalysis[];
   minVoc: number;
   maxVoc: number;
@@ -74,6 +83,9 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
   const chkBrand = isPhysicalHidden
     ? 'PV Module'
     : state.checklist.find((c) => c.no === '1.1')?.deskripsi.trim() || 'ADYA SOLAR';
+  const chkInverterBrand = isPhysicalHidden
+    ? ''
+    : state.checklist.find((c) => c.no === '4.1')?.deskripsi.trim() || '';
   const chkDaya = isPhysicalHidden
     ? ''
     : state.checklist.find((c) => c.no === '1.2')?.deskripsi.trim() || '250 Wp';
@@ -84,11 +96,17 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
     ? ''
     : state.checklist.find((c) => c.no === '2.1.3')?.keterangan.trim() || '';
 
-  // Parse string count (default 3)
+  // String count follows inverter family (Huawei = 4, SMA/Kehua = 3), then 2.1.3 fallback
   let stringCount = 3;
-  const fuseMatch = chkFuse.match(/(\d+)\s*String/i);
-  if (fuseMatch) {
-    stringCount = parseInt(fuseMatch[1], 10) || 3;
+  if (/huawei/i.test(chkInverterBrand)) {
+    stringCount = 4;
+  } else if (/\bsma\b|(?:kehua|keyhua)/i.test(chkInverterBrand)) {
+    stringCount = 3;
+  } else {
+    const fuseMatch = chkFuse.match(/(\d+)\s*String/i);
+    if (fuseMatch) {
+      stringCount = parseInt(fuseMatch[1], 10) || 3;
+    }
   }
 
   // Parse datasheet or fallback to checklist values
@@ -99,22 +117,25 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
   const ratedCurrentImp = parseIndoNumber(state.datasheet.ratedCurrentImp) || 6.68;
   const shortCircuitCurrentIsc = parseIndoNumber(state.datasheet.shortCircuitCurrentIsc) || 7.08;
 
-  const totalModules =
-    parseInt(chkTotal.replace(/[^0-9]/g, ''), 10) ||
-    parseIndoNumber(state.datasheet.numberOfModules) * stringCount ||
-    60;
+  const datasheetModulesVal = parseIndoNumber(state.datasheet.numberOfModules);
+  const chkTotalVal = parseInt(chkTotal.replace(/[^0-9]/g, ''), 10) || 0;
+  const rawModuleCount = datasheetModulesVal > 0 ? datasheetModulesVal : chkTotalVal || 60;
+  const totalModules = rawModuleCount;
 
-  let modulesPerString = parseIndoNumber(state.datasheet.numberOfModules);
-  if (!modulesPerString || modulesPerString <= 0) {
-    modulesPerString = Math.round(totalModules / stringCount) || 20;
-  }
+  const modulesPerString = Math.max(1, Math.round(rawModuleCount / stringCount));
 
   // STC Theoretical calculations
   const kapasitasPerString = modulesPerString * nominalPowerWp;
   const vocSTC = Math.round(modulesPerString * openCircuitVoltageVoc * 10) / 10;
   const vmpSTC = Math.round(modulesPerString * ratedVoltageVmp * 10) / 10;
+  const vocStcDisplay = Math.round(vocSTC);
+  const vmpStcDisplay = Math.round(vmpSTC);
   const impSTC = ratedCurrentImp;
   const iscSTC = shortCircuitCurrentIsc;
+  const ffNominal =
+    vocStcDisplay > 0 && iscSTC > 0
+      ? (vmpStcDisplay * impSTC) / (vocStcDisplay * iscSTC)
+      : 0;
 
   // Extract measurements from II.IV (Pasca) with fallback to Pra or default
   const getMeasurementVal = (id: string, defaultVal: number): number => {
@@ -332,6 +353,7 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
     ratedCurrentImp,
     shortCircuitCurrentIsc,
     totalModules,
+    rawModuleCount,
     stringCount,
     modulesPerString,
     kapasitasPerString,
@@ -339,6 +361,7 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
     vmpSTC,
     impSTC,
     iscSTC,
+    ffNominal,
     strings,
     minVoc,
     maxVoc,
@@ -356,4 +379,67 @@ export function computePVAnalysis(state: MaintenanceReportState): PVAnalysisResu
     technicalRecommendations,
     detectedDamages,
   };
+}
+
+export function formatTrimmedIndo(val: number, maxDecimals = 3): string {
+  if (isNaN(val)) return '0';
+  return Number(val.toFixed(maxDecimals)).toString().replace('.', ',');
+}
+
+function roundHalfUp1(val: number): number {
+  if (isNaN(val)) return 0;
+  return Math.round(Number(val.toFixed(6)) * 10) / 10;
+}
+
+export function getSTCTableRows(analysis: PVAnalysisResult): STCTableRow[] {
+  const vocRounded = Math.round(analysis.vocSTC);
+  const vmpRounded = Math.round(analysis.vmpSTC);
+  const impSmft = roundHalfUp1(analysis.impSTC);
+  const iscSmft = roundHalfUp1(analysis.iscSTC);
+  const ffPct = `${formatIndoNumber(analysis.ffNominal * 100, 1)}%`;
+
+  return [
+    {
+      parameter: 'Jumlah modul/string',
+      perhitungan: `${formatIndoNumber(analysis.rawModuleCount, 0)} ÷ ${analysis.stringCount} string`,
+      stc: `${analysis.modulesPerString} modul`,
+      smft1000: '—',
+    },
+    {
+      parameter: 'Kapasitas/string',
+      perhitungan: `${analysis.modulesPerString} × ${formatTrimmedIndo(analysis.nominalPowerWp, 2)} Wp`,
+      stc: `${analysis.kapasitasPerString.toLocaleString('id-ID')} Wp`,
+      smft1000: `${formatTrimmedIndo(analysis.kapasitasPerString / 1000, 2)} KW`,
+    },
+    {
+      parameter: 'Voc per string',
+      perhitungan: `${analysis.modulesPerString} × ${formatTrimmedIndo(analysis.openCircuitVoltageVoc, 3)} V`,
+      stc: `${formatIndoNumber(vocRounded, 0)} Vdc`,
+      smft1000: `${formatIndoNumber(vocRounded, 0)} V`,
+    },
+    {
+      parameter: 'Vmp per string',
+      perhitungan: `${analysis.modulesPerString} × ${formatTrimmedIndo(analysis.ratedVoltageVmp, 3)} V`,
+      stc: `${formatIndoNumber(vmpRounded, 0)} Vdc`,
+      smft1000: `${formatIndoNumber(vmpRounded, 0)} V`,
+    },
+    {
+      parameter: 'Imp per string',
+      perhitungan: '—',
+      stc: `${formatTrimmedIndo(analysis.impSTC, 3)} Adc`,
+      smft1000: `${formatIndoNumber(impSmft, 1)} A`,
+    },
+    {
+      parameter: 'Isc per string',
+      perhitungan: '—',
+      stc: `${formatTrimmedIndo(analysis.iscSTC, 3)} Adc`,
+      smft1000: `${formatIndoNumber(iscSmft, 1)} A`,
+    },
+    {
+      parameter: 'Fill Factor (FF) nominal',
+      perhitungan: `(${formatIndoNumber(vmpRounded, 0)} × ${formatTrimmedIndo(analysis.impSTC, 3)}) ÷ (${formatIndoNumber(vocRounded, 0)} × ${formatTrimmedIndo(analysis.iscSTC, 3)}) = ${formatIndoNumber(analysis.ffNominal, 3)}`,
+      stc: ffPct,
+      smft1000: ffPct,
+    },
+  ];
 }

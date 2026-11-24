@@ -27,6 +27,7 @@ import {
   applyCaptionToMeasurements,
   syncMeasurementsFromPhaseCaptions,
 } from '../lib/captionMeasurementSync';
+import { getDatasheetPresetForChecklist } from '../lib/inverterDatasheet';
 import {
   insertMeasurementInList, addMeasurementToList,
   deleteMeasurementFromList, updateMeasurementInList,
@@ -230,10 +231,28 @@ export const ReportProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const updateChecklistItem = (id: string, fields: Partial<ChecklistItem>) => {
-    applyUpdate((prev) => ({
-      ...prev,
-      checklist: prev.checklist.map((item) => (item.id === id ? { ...item, ...fields } : item)),
-    }));
+    applyUpdate((prev) => {
+      const nextChecklist = prev.checklist.map((item) =>
+        item.id === id ? { ...item, ...fields } : item
+      );
+      const changedItem = prev.checklist.find((item) => item.id === id);
+      let nextDatasheet = prev.datasheet;
+      if (
+        fields.deskripsi !== undefined &&
+        changedItem &&
+        (changedItem.no === '4.1' || changedItem.no === '4.2')
+      ) {
+        const preset = getDatasheetPresetForChecklist(nextChecklist);
+        if (preset) {
+          nextDatasheet = preset.datasheet;
+        }
+      }
+      return {
+        ...prev,
+        checklist: nextChecklist,
+        datasheet: nextDatasheet,
+      };
+    });
   };
 
   const updateMeasurement = (id: string, fields: Partial<ElectricalMeasurement>) => {

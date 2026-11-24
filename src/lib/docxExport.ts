@@ -12,7 +12,7 @@ import type { MaintenanceReportState } from '../types/schema';
 import { PHOTO_SLOTS_CATALOG } from '../constants/photoSlots';
 import { AC_STANDARD_VALUES } from '../constants/defaultData';
 import { updateConclusionWithLocation, formatIndoNumber, resolveWilayah } from './calculations';
-import { computePVAnalysis } from './pvAnalysis';
+import { computePVAnalysis, formatTrimmedIndo, getSTCTableRows } from './pvAnalysis';
 import { injectCustomPhotos } from './docxCustomPhotos';
 import { cleanPhotoTableCells } from './docxCleanup';
 
@@ -778,38 +778,56 @@ function updateComparisonTables(tables: HTMLCollectionOf<Element>, state: Mainte
 
 function updateSTCTables(tables: HTMLCollectionOf<Element>, state: MaintenanceReportState) {
   const analysis = computePVAnalysis(state);
+  const stcRows = getSTCTableRows(analysis);
 
-  // Table 57: STC calculations (Parameter | Perhitungan | Nilai Teoritis STC)
+  // Table 57: STC calculations (Parameter | Perhitungan | Nilai Teoritis STC | Nominal SMFT-1000)
   if (tables.length > 57) {
     const t57 = tables[57];
-    const rows = t57.getElementsByTagNameNS(W_NS, 'tr');
-    if (rows.length >= 7) {
-      const r1Cells = rows[1].getElementsByTagNameNS(W_NS, 'tc');
-      if (r1Cells.length >= 3) setTcText(r1Cells[2], `${analysis.modulesPerString} modul`);
+    const grid = t57.getElementsByTagNameNS(W_NS, 'tblGrid')[0];
+    if (grid) {
+      const cols = grid.getElementsByTagNameNS(W_NS, 'gridCol');
+      if (cols.length === 3) {
+        grid.appendChild(cols[2].cloneNode(true));
+      }
+      const updatedCols = grid.getElementsByTagNameNS(W_NS, 'gridCol');
+      const targetWidths = ['2100', '1950', '1613', '1600'];
+      for (let c = 0; c < Math.min(updatedCols.length, targetWidths.length); c++) {
+        updatedCols[c].setAttribute('w:w', targetWidths[c]);
+      }
+    }
 
-      const r2Cells = rows[2].getElementsByTagNameNS(W_NS, 'tc');
-      if (r2Cells.length >= 3) {
-        setTcText(r2Cells[1], `${analysis.modulesPerString} × ${analysis.nominalPowerWp} Wp`);
-        setTcText(r2Cells[2], `${analysis.kapasitasPerString.toLocaleString('id-ID')} Wp`);
+    const existingRows = t57.getElementsByTagNameNS(W_NS, 'tr');
+    if (existingRows.length >= 7) {
+      // Ensure all existing rows have 4 cells (adding Nominal SMFT-1000 column)
+      for (let r = 0; r < existingRows.length; r++) {
+        const cells = existingRows[r].getElementsByTagNameNS(W_NS, 'tc');
+        if (cells.length === 3) {
+          existingRows[r].appendChild(cells[2].cloneNode(true));
+        }
+      }
+      const headCells = existingRows[0].getElementsByTagNameNS(W_NS, 'tc');
+      if (headCells.length >= 4) {
+        setTcText(headCells[3], 'Nominal SMFT-1000', false, true);
+      }
+      // Clone last data row for Fill Factor (FF) nominal
+      while (t57.getElementsByTagNameNS(W_NS, 'tr').length < stcRows.length + 1) {
+        const rowsNow = t57.getElementsByTagNameNS(W_NS, 'tr');
+        const templateRow = rowsNow[rowsNow.length - 1];
+        t57.appendChild(templateRow.cloneNode(true));
       }
 
-      const r3Cells = rows[3].getElementsByTagNameNS(W_NS, 'tc');
-      if (r3Cells.length >= 3) {
-        setTcText(r3Cells[1], `${analysis.modulesPerString} × ${formatIndoNumber(analysis.openCircuitVoltageVoc, 1)} V`);
-        setTcText(r3Cells[2], `${formatIndoNumber(analysis.vocSTC, 0)} Vdc`);
-      }
-
-      const r4Cells = rows[4].getElementsByTagNameNS(W_NS, 'tc');
-      if (r4Cells.length >= 3) {
-        setTcText(r4Cells[1], `${analysis.modulesPerString} × ${formatIndoNumber(analysis.ratedVoltageVmp, 1)} V`);
-        setTcText(r4Cells[2], `${formatIndoNumber(analysis.vmpSTC, 0)} Vdc`);
-      }
-
-      const r5Cells = rows[5].getElementsByTagNameNS(W_NS, 'tc');
-      if (r5Cells.length >= 3) setTcText(r5Cells[2], `${formatIndoNumber(analysis.impSTC, 2)} Adc`);
-
-      const r6Cells = rows[6].getElementsByTagNameNS(W_NS, 'tc');
-      if (r6Cells.length >= 3) setTcText(r6Cells[2], `${formatIndoNumber(analysis.iscSTC, 2)} Adc`);
+      const finalRows = t57.getElementsByTagNameNS(W_NS, 'tr');
+      stcRows.forEach((dataRow, idx) => {
+        const tr = finalRows[idx + 1];
+        if (!tr) return;
+        const cells = tr.getElementsByTagNameNS(W_NS, 'tc');
+        if (cells.length >= 4) {
+          setTcText(cells[0], dataRow.parameter);
+          setTcText(cells[1], dataRow.perhitungan);
+          setTcText(cells[2], dataRow.stc);
+          setTcText(cells[3], dataRow.smft1000);
+        }
+      });
     }
   }
 
@@ -965,6 +983,7 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
   let currentVocString = 0;
   let currentVmpString = 0;
   let hasSetExecutiveSummary = false;
+  let hasInsertedModulesLine = false;
 
   for (let i = 0; i < paragraphs.length; i++) {
     const p = paragraphs[i];
@@ -1092,6 +1111,29 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
             lastT.textContent = ': ' + (val ? val.trim() : '');
           }
         }
+        if (prefix === 'Maximum System Voltage' && !hasInsertedModulesLine) {
+          const clone = p.cloneNode(true) as Element;
+          clone.removeAttribute('w14:paraId');
+          const cloneTs = clone.getElementsByTagNameNS(W_NS, 't');
+          if (cloneTs.length >= 2) {
+            cloneTs[0].textContent = 'Jumlah Modul Seri per String';
+            cloneTs[cloneTs.length - 1].textContent =
+              ': ' + (state.datasheet.numberOfModules ? state.datasheet.numberOfModules.trim() : '');
+          }
+          // Trim one standalone tab run so 28-char label aligns with other datasheet rows
+          const runs = Array.from(clone.getElementsByTagNameNS(W_NS, 'r'));
+          const standaloneTabRun = runs.find(
+            (r) =>
+              r.getElementsByTagNameNS(W_NS, 'tab').length > 0 &&
+              r.getElementsByTagNameNS(W_NS, 't').length === 0
+          );
+          if (standaloneTabRun?.parentNode) {
+            standaloneTabRun.parentNode.removeChild(standaloneTabRun);
+          }
+          p.parentNode?.insertBefore(clone, p.nextSibling);
+          hasInsertedModulesLine = true;
+          i += 1;
+        }
         matchedDs = true;
         break;
       }
@@ -1099,9 +1141,9 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
     if (matchedDs) continue;
 
     if (textContent.includes('Berdasarkan spesifikasi datasheet modul PV')) {
-      const newP329 = 'Berdasarkan spesifikasi datasheet modul PV ' + getValOrEmpty(
-        state.datasheet.nominalPower
-      ) + ' Wp yang terlampir, berikut adalah nilai referensi untuk rangkaian ' + getValOrEmpty(
+      const pVal = getValOrEmpty(state.datasheet.nominalPower);
+      const pLabel = /\bwp?\b/i.test(pVal) ? pVal : `${pVal} Wp`;
+      const newP329 = 'Berdasarkan spesifikasi datasheet modul PV ' + pLabel + ' yang terlampir, berikut adalah nilai referensi untuk rangkaian ' + getValOrEmpty(
         state.datasheet.numberOfModules
       ) + ' modul seri:';
       setParagraphText(p, newP329);
@@ -1115,7 +1157,7 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
       } else {
         setParagraphText(
           p,
-          'Berdasarkan data teknis PV Module ' + analysis.brand + ' ' + analysis.nominalPowerWp + ' Wp, setiap modul memiliki nilai Vmp sebesar ' + formatIndoNumber(analysis.ratedVoltageVmp, 1) + ' V dan Voc sebesar ' + formatIndoNumber(analysis.openCircuitVoltageVoc, 1) + ' V. Sistem PLTS ' + (state.location.lokasi.trim() || 'Lokasi') + ' terdiri dari ' + analysis.totalModules + ' modul yang terbagi menjadi ' + analysis.stringCount + ' string, sehingga secara konfigurasi masing-masing string terdiri dari ' + analysis.modulesPerString + ' modul yang terhubung secara seri.'
+          'Berdasarkan data teknis PV Module ' + analysis.brand + ' ' + analysis.nominalPowerWp + ' Wp, setiap modul memiliki nilai Vmp sebesar ' + formatTrimmedIndo(analysis.ratedVoltageVmp, 3) + ' V dan Voc sebesar ' + formatTrimmedIndo(analysis.openCircuitVoltageVoc, 3) + ' V. Sistem PLTS ' + (state.location.lokasi.trim() || 'Lokasi') + ' terdiri dari ' + analysis.totalModules + ' modul yang terbagi menjadi ' + analysis.stringCount + ' string, sehingga secara konfigurasi masing-masing string terdiri dari ' + analysis.modulesPerString + ' modul yang terhubung secara seri.'
         );
       }
       continue;
@@ -1138,14 +1180,14 @@ function updateDynamicParagraphs(xmlDoc: Document, state: MaintenanceReportState
     if (textContent.includes('Voc(STC) =') || textContent.includes('Voc ( STC) =')) {
       setParagraphText(
         p,
-        'Voc(STC) = ' + analysis.modulesPerString + ' × ' + formatIndoNumber(analysis.openCircuitVoltageVoc, 1) + ' V = ' + formatIndoNumber(analysis.vocSTC, 0) + ' Vdc'
+        'Voc(STC) = ' + analysis.modulesPerString + ' × ' + formatTrimmedIndo(analysis.openCircuitVoltageVoc, 3) + ' V = ' + formatIndoNumber(analysis.vocSTC, 0) + ' Vdc'
       );
       continue;
     }
     if (textContent.includes('Vmp(STC) =') || textContent.includes('Vmp ( STC) =')) {
       setParagraphText(
         p,
-        'Vmp(STC) = ' + analysis.modulesPerString + ' × ' + formatIndoNumber(analysis.ratedVoltageVmp, 1) + ' V = ' + formatIndoNumber(analysis.vmpSTC, 0) + ' Vdc'
+        'Vmp(STC) = ' + analysis.modulesPerString + ' × ' + formatTrimmedIndo(analysis.ratedVoltageVmp, 3) + ' V = ' + formatIndoNumber(analysis.vmpSTC, 0) + ' Vdc'
       );
       continue;
     }

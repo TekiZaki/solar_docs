@@ -14,8 +14,12 @@ import {
   EXAMPLE_DATASHEET,
   EXAMPLE_STC_STRINGS,
 } from '../../constants/defaultData';
-import { computePVAnalysis } from '../../lib/pvAnalysis';
+import { computePVAnalysis, formatTrimmedIndo, getSTCTableRows } from '../../lib/pvAnalysis';
 import { formatIndoNumber } from '../../lib/calculations';
+import {
+  areDatasheetsEqual,
+  getDatasheetPresetForChecklist,
+} from '../../lib/inverterDatasheet';
 
 export const PhaseAnalysis: React.FC = () => {
   const {
@@ -36,6 +40,14 @@ export const PhaseAnalysis: React.FC = () => {
   const acItems = state.measurements.filter((m) => m.id.startsWith('ac_') || m.id.startsWith('ground_'));
 
   const analysis = useMemo(() => computePVAnalysis(state), [state]);
+  const stcTableRows = useMemo(() => getSTCTableRows(analysis), [analysis]);
+  const inverterPreset = useMemo(
+    () => getDatasheetPresetForChecklist(state.checklist),
+    [state.checklist]
+  );
+  const matchesInverterPreset =
+    inverterPreset !== null &&
+    areDatasheetsEqual(state.datasheet, inverterPreset.datasheet);
 
   const handleAutoFillSTC = () => {
     state.stcStrings.forEach((str, sIdx) => {
@@ -346,13 +358,31 @@ export const PhaseAnalysis: React.FC = () => {
 
       {/* III.II.II. Data Sheet PV Module */}
       <div className="bg-white border border-black rounded-lg p-4 sm:p-5 space-y-4 shadow-sm">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">
-            III.II.II. Data Sheet PV Module
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Nama parameter terkunci. Nilai spesifikasi dapat disesuaikan dengan datasheet modul yang terpasang di lokasi.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">
+              III.II.II. Data Sheet PV Module
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Terisi otomatis sesuai inverter pada checklist 4.1 &amp; 4.2, namun tetap dapat disesuaikan manual.
+            </p>
+          </div>
+          {inverterPreset && (
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="text-[11px] font-medium px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                Inverter: {inverterPreset.label}
+              </span>
+              {!matchesInverterPreset && (
+                <button
+                  type="button"
+                  onClick={() => updateDatasheet(inverterPreset.datasheet)}
+                  className="text-[11px] font-medium px-2.5 py-1 rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Terapkan Preset Inverter
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -470,7 +500,7 @@ export const PhaseAnalysis: React.FC = () => {
         {/* Narrative STC Box */}
         <div className="p-3 bg-slate-50 rounded border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1">
           <p>
-            Berdasarkan data teknis PV Module <strong>{analysis.brand} {analysis.nominalPowerWp} Wp</strong>, setiap modul memiliki nilai Vmp sebesar <strong>{formatIndoNumber(analysis.ratedVoltageVmp, 1)} V</strong> dan Voc sebesar <strong>{formatIndoNumber(analysis.openCircuitVoltageVoc, 1)} V</strong>. Sistem PLTS <strong>{state.location.lokasi.trim() || 'Lokasi'}</strong> terdiri dari <strong>{analysis.totalModules} modul</strong> yang terbagi menjadi <strong>{analysis.stringCount} string</strong>, sehingga secara konfigurasi masing-masing string terdiri dari <strong>{analysis.modulesPerString} modul</strong> yang terhubung secara seri.
+            Berdasarkan data teknis PV Module <strong>{analysis.brand} {analysis.nominalPowerWp} Wp</strong>, setiap modul memiliki nilai Vmp sebesar <strong>{formatTrimmedIndo(analysis.ratedVoltageVmp, 3)} V</strong> dan Voc sebesar <strong>{formatTrimmedIndo(analysis.openCircuitVoltageVoc, 3)} V</strong>. Sistem PLTS <strong>{state.location.lokasi.trim() || 'Lokasi'}</strong> terdiri dari <strong>{analysis.totalModules} modul</strong> yang terbagi menjadi <strong>{analysis.stringCount} string</strong>, sehingga secara konfigurasi masing-masing string terdiri dari <strong>{analysis.modulesPerString} modul</strong> yang terhubung secara seri.
           </p>
           <p className="text-slate-500 italic">
             Pada konfigurasi seri, tegangan setiap modul akan dijumlahkan, sedangkan arus string secara teoritis tetap sama dengan arus satu modul.
@@ -478,46 +508,51 @@ export const PhaseAnalysis: React.FC = () => {
         </div>
 
         {/* STC Calculation Table */}
-        <div className="border border-black rounded-lg overflow-hidden">
+        <div className="border border-black rounded-lg overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-blue-100 text-slate-800 font-semibold border-b border-black">
               <tr>
                 <th className="py-2.5 px-3">PARAMETER</th>
                 <th className="py-2.5 px-3">PERHITUNGAN</th>
                 <th className="py-2.5 px-3">NILAI TEORITIS STC</th>
+                <th className="py-2.5 px-3">Nominal SMFT-1000</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              <tr>
-                <td className="py-2 px-3 font-medium text-slate-700">Jumlah modul/string</td>
-                <td className="py-2 px-3 font-mono text-slate-400">—</td>
-                <td className="py-2 px-3 font-mono font-semibold text-slate-800">{analysis.modulesPerString} modul</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 font-medium text-slate-700">Kapasitas/string</td>
-                <td className="py-2 px-3 font-mono text-slate-600">{analysis.modulesPerString} × {analysis.nominalPowerWp} Wp</td>
-                <td className="py-2 px-3 font-mono font-semibold text-slate-800">{analysis.kapasitasPerString.toLocaleString('id-ID')} Wp</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 font-medium text-slate-700">Voc/string</td>
-                <td className="py-2 px-3 font-mono text-slate-600">{analysis.modulesPerString} × {formatIndoNumber(analysis.openCircuitVoltageVoc, 1)} V</td>
-                <td className="py-2 px-3 font-mono font-semibold text-blue-700 bg-blue-50/30">{formatIndoNumber(analysis.vocSTC, 0)} Vdc</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 font-medium text-slate-700">Vmp/string</td>
-                <td className="py-2 px-3 font-mono text-slate-600">{analysis.modulesPerString} × {formatIndoNumber(analysis.ratedVoltageVmp, 1)} V</td>
-                <td className="py-2 px-3 font-mono font-semibold text-blue-700 bg-blue-50/30">{formatIndoNumber(analysis.vmpSTC, 0)} Vdc</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 font-medium text-slate-700">Imp/string</td>
-                <td className="py-2 px-3 font-mono text-slate-400">—</td>
-                <td className="py-2 px-3 font-mono font-semibold text-slate-800">{formatIndoNumber(analysis.impSTC, 2)} Adc</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 font-medium text-slate-700">Isc/string</td>
-                <td className="py-2 px-3 font-mono text-slate-400">—</td>
-                <td className="py-2 px-3 font-mono font-semibold text-slate-800">{formatIndoNumber(analysis.iscSTC, 2)} Adc</td>
-              </tr>
+              {stcTableRows.map((row) => {
+                const highlightStc =
+                  row.parameter === 'Voc per string' || row.parameter === 'Vmp per string';
+                return (
+                  <tr key={row.parameter}>
+                    <td className="py-2 px-3 font-medium text-slate-700">{row.parameter}</td>
+                    <td
+                      className={`py-2 px-3 font-mono ${
+                        row.perhitungan === '—' ? 'text-slate-400' : 'text-slate-600'
+                      }`}
+                    >
+                      {row.perhitungan}
+                    </td>
+                    <td
+                      className={`py-2 px-3 font-mono font-semibold ${
+                        highlightStc
+                          ? 'text-blue-700 bg-blue-50/30'
+                          : 'text-slate-800'
+                      }`}
+                    >
+                      {row.stc}
+                    </td>
+                    <td
+                      className={`py-2 px-3 font-mono font-semibold ${
+                        row.smft1000 === '—'
+                          ? 'text-slate-400 font-normal'
+                          : 'text-slate-800'
+                      }`}
+                    >
+                      {row.smft1000}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
