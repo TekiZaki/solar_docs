@@ -449,7 +449,7 @@ export const AppContent: React.FC = () => {
         </main>
 
         <footer className="border-t border-slate-200 bg-white py-4 px-6 text-xs text-slate-400 text-center">
-          Footer disini
+          V 0.5.4
         </footer>
 
         <ScrollButtons />
